@@ -1,0 +1,184 @@
+#!/usr/bin/env bash
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.  Please see LICENSE.txt at the top level of
+# the source code distribution for details.
+#
+# @package nftables-apply
+# @author <felix.bouynot@setenforce.one>
+# @link https://gist.github.com/fbouynot/00f89f4bcaa2b1fa4b9f70b24ebc8cc6
+# @copyright <felix.bouynot@setenforce.one>
+#
+# Free adaptation for nftables of iptables-apply (https://github.com/wertarbyte/iptables/blob/master/iptables-apply)
+#
+
+
+# When a command fails, bash exits instead of continuing with the rest of the script
+set -o errexit
+# This will make the script fail, when accessing an unset variable
+set -o nounset
+# This will ensure that a pipeline command is treated as failed, even if one command in the pipeline fails
+set -o pipefail
+# Enable debug mode by running your script as TRACE=1 ./script.sh instead of ./script.sh
+if [[ "${TRACE-0}" == "1" ]]
+then
+    set -o xtrace
+fi
+
+readonly PROGNAME="${0##*/}"
+readonly VERSION="1.1.4"
+
+readonly DEFAULT_TIMEOUT=15
+readonly DEFAULT_DESTINATION_FILE=/etc/nftables.conf
+readonly DEFAULT_SOURCE_FILE=/etc/nftables-candidate.conf
+
+# Deal with argument pairs
+while [[ $# -gt 1 ]]
+do
+    key="${1}"
+
+    case $key in
+        -s|--source-file)
+            export SOURCE_FILE="${2}"
+            shift # consume -s
+            ;;
+        -d|--destination-file)
+            export DESTINATION_FILE="${2}"
+            shift # consume -d
+            ;;
+        -t|--timeout)
+            export TIMEOUT="${2}"
+            shift # consume -t
+            ;;
+        *)
+        ;;
+    esac
+    shift # consume $1
+done
+
+# Set defaults if no options specified
+if [ -z "${SOURCE_FILE+x}" ]
+then
+    SOURCE_FILE="${DEFAULT_SOURCE_FILE}"
+fi
+
+if [ -z "${DESTINATION_FILE+x}" ]
+then
+    DESTINATION_FILE="${DEFAULT_DESTINATION_FILE}"
+fi
+
+if [ -z "${TIMEOUT+x}" ]
+then
+    TIMEOUT="${DEFAULT_TIMEOUT}"
+fi
+
+help() {
+    cat << EOF
+Usage: ${PROGNAME} [ { -s | --source-file } <source-file> ] [ { -d | --destination-file } <destination-file> ] [ { -t | --timeout } <timeout> ]
+-h    --help                                                     Print this message.
+-v    --version                                                  Print the version.
+-s    --source-file        STRING                                The source file for candidate config.
+-d    --destination-file   STRING                                The destination file where to write the config.
+-t    --timeout            INT                                   The time to wait before rolling back.
+EOF
+
+exit 2
+}
+
+version() {
+    cat << EOF
+${PROGNAME} version ${VERSION} under GPLv3 licence.
+EOF
+
+exit 2
+}
+
+# Display help message if -h --help -help h or help parameter
+if [[ "${1-}" =~ ^-*h(elp)?$ ]]
+then
+    help
+fi
+
+# Display version message if -v --version -version v or version parameter
+if [[ "${1-}" =~ ^-*v(ersion)?$ ]]
+then
+    version
+fi
+
+# Change directory to base script directory
+cd "$(dirname "${0}")"
+
+restore() {
+    nft flush ruleset
+    nft -f /tmp/nftables.conf.bak
+    rm -f /tmp/nftables.conf.bak
+
+    return 0
+}
+
+save() {
+    cp "${SOURCE_FILE}" "${DESTINATION_FILE}"
+    echo -e "\nConfiguration changed"
+
+    return 0
+}
+
+# Main function
+main() {
+    # Check the command is run as root
+    if [ "${EUID}" -ne 0 ]
+    then
+        echo "E: please run as root" >&2
+        exit 3
+    fi
+
+    # Check if we can read the destination file
+    if [[ ! -r "${DESTINATION_FILE}" ]]
+    then
+        echo "E: cannot read ${DESTINATION_FILE}" >&2
+        exit 4
+    fi
+
+    # Backup current ruleset
+    nft list ruleset > /tmp/nftables.conf.bak
+
+    # Check if we can read the source file
+    if [[ ! -r "${SOURCE_FILE}" ]]
+    then
+        echo "E: cannot read ${SOURCE_FILE}" >&2
+        exit 5
+    fi
+
+    # Dry run new ruleset, exit if failures
+    nft -f "${SOURCE_FILE}" || (echo "E: Invalid rules, exiting" >&2 && exit 6)
+
+    # Check the candidate configuration starts by flushing ruleset
+    if [[ $(head -n 1 /etc/nftables-candidate.conf) != "flush ruleset" ]]
+    then
+        sed -i '1s/^/flush ruleset\n/' "${SOURCE_FILE}"
+    fi
+
+    # Apply new ruleset, rollback if timeout
+    timeout "${TIMEOUT}"s nft -f "${SOURCE_FILE}" || (echo "E: timeout while applying new configuration, rolling back to the previous ruleset" >&2 && restore && exit 7)
+
+    # Ask the user if they can open a new connection
+    # If they can't, rollback
+    # If they can, save
+    echo -n "Can you establish NEW connections to the machine? (y/N) "
+    read -r -n1 -t "${TIMEOUT}" ANSWER 2>&1 || :
+    if [[ "${ANSWER}" == "y" ]]
+    then
+        save
+    else
+        echo -e "\nE: rolling back to the previous ruleset" >&2
+        restore
+        exit 8
+    fi
+    rm -f /tmp/nftables.conf.bak
+
+    exit 0
+}
+
+main "$@"
