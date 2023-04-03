@@ -280,7 +280,7 @@ main() {
     firewall-cmd --zone public --add-service http --add-service https
     firewall-cmd --permanent --zone public --add-service http --add-service https
 
-# add clean function
+# add cleaning function
 # group laravel specific
 # prepare to deal with other servers
 # nginx default blocks
@@ -288,7 +288,8 @@ main() {
 # verbose ?
 # log file ?
 # check distro ? (at least fedora vs centos)
-# lnms like for permissions
+# display ok / fail lnms like for permissions and firewall
+# generate random password for mariadb
 
     systemctl reload nginx php-fpm mariadb
 
