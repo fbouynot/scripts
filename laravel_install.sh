@@ -116,7 +116,7 @@ check_root() {
     # Check the command is run as root
     if [ "${EUID}" -ne 0 ]
     then
-        echo -e "E: please run as root\n" >&2
+        printf 'E: please run as root\n' >&2
         exit 3
     fi
 
@@ -130,7 +130,7 @@ install_package() {
     if dnf list installed -q "${1}" 1> /dev/null 2> /dev/null
     then
         printf " \\033[0;31mFAIL\\033[0m\\n"
-        echo -e "E: ${1} is already installed.\n" >&2
+        printf 'E: %s is already installed.\n' "${1}" >&2
         exit 4
     fi
 
@@ -138,7 +138,7 @@ install_package() {
     if ! dnf -yq install "${@}" 1> /dev/null 2> /dev/null
     then
         printf " \\033[0;31mFAIL\\033[0m\\n"
-        echo -e "E: ${1} installation failed\n" >&2
+        printf 'E: %s installation failed\n' "${1}" >&2
         exit 5
     fi
     printf " \\033[0;32mOK\\033[0m\\n";
