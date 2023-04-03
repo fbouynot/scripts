@@ -253,8 +253,8 @@ main() {
     su - "${PROJECT}" -c "composer create-project laravel/laravel ${PROJECT} 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cp /opt/${PROJECT}/${PROJECT}/.env.example /opt/${PROJECT}/${PROJECT}/.env 1> /dev/null 2> /dev/null"
 # add to env ? what does it do ?
-    sed -i 's/#DB_USERNAME=.*/root/g' /opt/${PROJECT}/${PROJECT}/.env
-    sed -i "s/#DB_PASSWORD=.*/${DB_PASSWORD}/g" /opt/${PROJECT}/${PROJECT}/.env
+    sed -i 's/#DB_USERNAME=.*/root/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i "s/#DB_PASSWORD=.*/${DB_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     su - "${PROJECT}" -c "cd ${PROJECT} && php artisan storage:link 1> /dev/null 2> /dev/null"
 # what does it do ?
 # add bootstrap and auth ?
