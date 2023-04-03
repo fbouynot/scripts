@@ -227,7 +227,7 @@ EOF
 # Main function
 main() {
     local DB_PASSWORD
-    DB_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128 || true)
+    DB_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128) || true
     # Check root permissions
     check_root
     # Install and configure services
