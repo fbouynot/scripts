@@ -153,7 +153,7 @@ enable_package() {
     if ! systemctl enable --now "${1}" 1> /dev/null 2> /dev/null
     then
         printf " \\033[0;31mFAIL\\033[0m\\n"
-        echo "E: cannot start ${1}\n" >&2
+        printf 'E: cannot start %s\n' "${1}" >&2
         exit 6
     fi
     printf " \\033[0;32mOK\\033[0m\\n";
