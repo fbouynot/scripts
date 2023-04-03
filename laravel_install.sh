@@ -27,7 +27,7 @@ then
 fi
 
 readonly PROGNAME="${0##*/}"
-readonly VERSION="1.0.0"
+readonly VERSION='1.0.0'
 
 readonly DEFAULT_PROJECT=laravel
 readonly DEFAULT_WEBSERVER=nginx
@@ -213,8 +213,8 @@ install_mariadb() {
 
 y
 y
-toto
-toto
+${1}
+${1}
 y
 y
 y
@@ -226,12 +226,13 @@ EOF
 
 # Main function
 main() {
+    local DB_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
     # Check root permissions
     check_root
     # Install and configure services
     install_nginx
     install_php-fpm
-    install_mariadb
+    install_mariadb "${DB_PASSWORD}"
 
     # Create project user
     mkdir -p /opt/"${PROJECT}"
@@ -251,6 +252,8 @@ main() {
     su - "${PROJECT}" -c "composer create-project laravel/laravel ${PROJECT} 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cp /opt/${PROJECT}/${PROJECT}/.env.example /opt/${PROJECT}/${PROJECT}/.env 1> /dev/null 2> /dev/null"
 # add to env ? what does it do ?
+    sed -i "s/#DB_USERNAME=.*/root/g" /opt/${PROJECT}/${PROJECT}/.env
+    sed -i "s/#DB_PASSWORD=.*/${DB_PASSWORD}/g" /opt/${PROJECT}/${PROJECT}/.env
     su - "${PROJECT}" -c "cd ${PROJECT} && php artisan storage:link 1> /dev/null 2> /dev/null"
 # what does it do ?
 # add bootstrap and auth ?
@@ -290,6 +293,7 @@ main() {
 # check distro ? (at least fedora vs centos)
 # display ok / fail lnms like for permissions and firewall
 # generate random password for mariadb
+# add project user db
 
     systemctl reload nginx php-fpm mariadb
 
