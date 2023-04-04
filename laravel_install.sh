@@ -244,7 +244,7 @@ main() {
     # Permissions step 1
     # Grants the project user and group read and write rights on project folder
 
-    printf "%-50s" "Permissions step 1 : DAC classic"
+    printf "%-50s" "permissions step 1: DAC classic"
     chown -R root:"${PROJECT}" /opt/"${PROJECT}"
     chmod 2770 /opt/"${PROJECT}"
     find /opt/"${PROJECT}" -type d -exec chmod 2770 {} \;
@@ -258,8 +258,8 @@ main() {
     su - "${PROJECT}" -c "composer create-project laravel/laravel ${PROJECT} 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cp /opt/${PROJECT}/${PROJECT}/.env.example /opt/${PROJECT}/${PROJECT}/.env 1> /dev/null 2> /dev/null"
 # add to env ? what does it do ?
-    sed -i 's/DB_USERNAME=.*/root/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i "s/DB_PASSWORD=.*/${DB_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/DB_USERNAME=.*/DB_USERNAME=root/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i "s/DB_PASSWORD=.*/DB_USERNAME=${DB_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     su - "${PROJECT}" -c "cd ${PROJECT} && php artisan storage:link 1> /dev/null 2> /dev/null"
 # what does it do ?
 # add bootstrap and auth ?
@@ -269,9 +269,9 @@ main() {
     # Grants the group 'webserver' read, permissions on public folder
     # Grants the group 'backend' read permissions on project folder, read and write permissions on storage folder
 
-    printf "%-50s" "Permissions step 2 : DAC ACL"
+    printf "%-50s" "permissions step 2: DAC ACL"
     # Add group dev if it does not exists
-    getent group devs || groupadd devs
+    getent group devs 1> /dev/null 2> /dev/null || groupadd devs
     setfacl -Rm d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"
@@ -283,8 +283,8 @@ main() {
     # Grants the webserver and backend processes permissions to read public folder, to read and write cache/storage folder
     # Grants logrotate process permissions to rotate the files in the log folder
 
-    printf "%-50s" "Permissions step 3 : MAC"
     install_package "policycoreutils-python-utils"
+    printf "%-50s" "permissions step 3: MAC"
     semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
     semanage fcontext -a -t httpd_sys_content_t "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
     semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
@@ -295,8 +295,8 @@ main() {
     printf " \\033[0;32mOK\\033[0m\\n";
 
     # Open ports
-    firewall-cmd --zone public --add-service http --add-service https
-    firewall-cmd --permanent --zone public --add-service http --add-service https
+    firewall-cmd --zone public --add-service http --add-service https 1> /dev/null 2> /dev/null
+    firewall-cmd --permanent --zone public --add-service http --add-service https 1> /dev/null 2> /dev/null
 
 # add cleaning function
 # group laravel specific
@@ -310,7 +310,7 @@ main() {
 # generate random password for mariadb
 # add project user db
 
-    systemctl restart nginx php-fpm mariadb
+    systemctl restart nginx php-fpm mariadb 1> /dev/null 2> /dev/null
 
     exit 0
 }
