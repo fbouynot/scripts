@@ -185,8 +185,8 @@ install_php-fpm() {
     # Install
     install_package "php-fpm"
 
-    # Create a dedicated user for php-fpm
-    useradd "${BACKEND}" --system --no-create-home --user-group --shell /sbin/nologin
+    # Add backend user if it does not exists
+    id -u "${BACKEND}" 1> /dev/null 2> /dev/null || useradd "${BACKEND}" --system --no-create-home --user-group --shell /sbin/nologin
     # Configure php-fpm default pool user and group
     sed -i "s/user =.*/user = ${BACKEND}/g" /etc/php-fpm.d/www.conf
     sed -i "s/group =.*/group = ${BACKEND}/g" /etc/php-fpm.d/www.conf
@@ -239,7 +239,7 @@ main() {
 
     # Create project user
     mkdir -p /opt/"${PROJECT}"
-    useradd "${PROJECT}" -d /opt/"${PROJECT}" -M -r -s "$(which bash)"
+    id -u "${PROJECT}" 1> /dev/null 2> /dev/null || useradd "${PROJECT}" -d /opt/"${PROJECT}" -M -r -s "$(which bash)"
 
     # Permissions step 1
     # Grants the project user and group read and write rights on project folder
