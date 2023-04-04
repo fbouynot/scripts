@@ -270,7 +270,8 @@ main() {
     # Grants the group 'backend' read permissions on project folder, read and write permissions on storage folder
 
     printf "%-50s" "Permissions step 2 : DAC ACL"
-    groupadd devs
+    # Add group dev if it does not exists
+    getent group devs || groupadd devs
     setfacl -Rm d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"
