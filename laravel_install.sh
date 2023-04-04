@@ -251,7 +251,7 @@ main() {
 
     # Setup Framework
     # Need access to https://repo.packagist.org
-    dnf install -qy composer 1> /dev/null 2> /dev/null
+    install_package "composer"
     su - "${PROJECT}" -c "composer global require laravel/installer 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "composer create-project laravel/laravel ${PROJECT} 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cp /opt/${PROJECT}/${PROJECT}/.env.example /opt/${PROJECT}/${PROJECT}/.env 1> /dev/null 2> /dev/null"
@@ -277,7 +277,7 @@ main() {
     # Permissions step 3
     # Grants the webserver and backend processes permissions to read public folder, to read and write cache/storage folder
     # Grants logrotate process permissions to rotate the files in the log folder
-    dnf install policycoreutils-python-utils
+    install_package "policycoreutils-python-utils"
     semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
     semanage fcontext -a -t httpd_sys_content_t "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
     semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
@@ -302,7 +302,7 @@ main() {
 # generate random password for mariadb
 # add project user db
 
-    systemctl reload nginx php-fpm mariadb
+    systemctl restart nginx php-fpm mariadb
 
     exit 0
 }
