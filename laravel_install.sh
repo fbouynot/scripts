@@ -8,7 +8,7 @@
 #
 # @package install_laravel.sh
 # @author <felix.bouynot@setenforce.one>
-# @link https://gist.github.com/fbouynot/3a9cc8f1e5a9aea45b4446e5bf383843
+# @link https://github.com/fbouynot/scripts/blob/main/laravel_install.sh
 # @copyright <felix.bouynot@setenforce.one>
 #
 # Install laravel on fedora with lemp
