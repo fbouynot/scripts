@@ -248,6 +248,7 @@ main() {
     find /opt/"${PROJECT}" -type f -exec chmod 0660 {} \;
 
     # Setup Framework
+    # Need access to https://repo.packagist.org
     dnf install -qy composer 1> /dev/null 2> /dev/null
     su - "${PROJECT}" -c "composer global require laravel/installer 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "composer create-project laravel/laravel ${PROJECT} 1> /dev/null 2> /dev/null"
