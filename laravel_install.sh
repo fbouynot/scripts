@@ -275,8 +275,11 @@ main() {
     # Grants the webserver and backend processes permissions to read public folder, to read and write cache/storage folder
     # Grants logrotate process permissions to rotate the files in the log folder
     dnf install policycoreutils-python-utils
+    semanage fcontext -a "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
     semanage fcontext -a -t httpd_sys_content_t "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
+    semanage fcontext -a "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
     semanage fcontext -a -t httpd_sys_rw_content_t "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
+    semanage fcontext -a "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
     semanage fcontext -a -t httpd_log_t "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
     restorecon -RF /opt/"${PROJECT}"
 
