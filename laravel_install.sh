@@ -244,15 +244,17 @@ main() {
     # Permissions step 1
     # Grants the project user and group read and write rights on project folder
 
+    printf "%-50s" "Permissions step 1 : DAC classic"
     chown -R root:"${PROJECT}" /opt/"${PROJECT}"
     chmod 2770 /opt/"${PROJECT}"
     find /opt/"${PROJECT}" -type d -exec chmod 2770 {} \;
     find /opt/"${PROJECT}" -type f -exec chmod 0660 {} \;
-
+    printf " \\033[0;32mOK\\033[0m\\n";
     # Setup Framework
     # Need access to https://repo.packagist.org
     install_package "composer"
     su - "${PROJECT}" -c "composer global require laravel/installer 1> /dev/null 2> /dev/null"
+    rm -rf /opt/"${PROJECT}"/
     su - "${PROJECT}" -c "composer create-project laravel/laravel ${PROJECT} 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cp /opt/${PROJECT}/${PROJECT}/.env.example /opt/${PROJECT}/${PROJECT}/.env 1> /dev/null 2> /dev/null"
 # add to env ? what does it do ?
@@ -267,16 +269,20 @@ main() {
     # Grants the group 'webserver' read, permissions on public folder
     # Grants the group 'backend' read permissions on project folder, read and write permissions on storage folder
 
+    printf "%-50s" "Permissions step 2 : DAC ACL"
     groupadd devs
     setfacl -Rm d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"
     setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":r-x,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/public /opt/"${PROJECT}"/"${PROJECT}"/resources /opt/"${PROJECT}"/"${PROJECT}"/vendor
     setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/storage
+    printf " \\033[0;32mOK\\033[0m\\n";
 
     # Permissions step 3
     # Grants the webserver and backend processes permissions to read public folder, to read and write cache/storage folder
     # Grants logrotate process permissions to rotate the files in the log folder
+
+    printf "%-50s" "Permissions step 3 : MAC"
     install_package "policycoreutils-python-utils"
     semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
     semanage fcontext -a -t httpd_sys_content_t "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
@@ -285,6 +291,7 @@ main() {
     semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
     semanage fcontext -a -t httpd_log_t "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
     restorecon -RF /opt/"${PROJECT}"
+    printf " \\033[0;32mOK\\033[0m\\n";
 
     # Open ports
     firewall-cmd --zone public --add-service http --add-service https
