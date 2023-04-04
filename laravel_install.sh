@@ -254,7 +254,7 @@ main() {
     # Need access to https://repo.packagist.org
     install_package "composer"
     su - "${PROJECT}" -c "composer global require laravel/installer 1> /dev/null 2> /dev/null"
-    rm -rf /opt/"${PROJECT}"/
+    rm -rf /opt/"${PROJECT}"/"${PROJECT}"
     su - "${PROJECT}" -c "composer create-project laravel/laravel ${PROJECT} 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cp /opt/${PROJECT}/${PROJECT}/.env.example /opt/${PROJECT}/${PROJECT}/.env 1> /dev/null 2> /dev/null"
 # add to env ? what does it do ?
