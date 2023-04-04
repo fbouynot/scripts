@@ -32,6 +32,7 @@ readonly VERSION='1.0.0'
 readonly DEFAULT_PROJECT=laravel
 readonly DEFAULT_WEBSERVER=nginx
 readonly DEFAULT_BACKEND=php-fpm
+readonly DEFAULT_DATABASE=mariadb
 
 # Deal with argument pairs
 while [[ $# -gt 1 ]]
@@ -44,11 +45,15 @@ do
             shift # consume -s
             ;;
         -w|--webserver)
-            export PROJECT="${2}"
+            export WEBSERVER="${2}"
             shift # consume -s
             ;;
         -b|--backend)
-            export PROJECT="${2}"
+            export BACKEND="${2}"
+            shift # consume -s
+            ;;
+        -d|--database)
+            export DATABASE="${2}"
             shift # consume -s
             ;;
         *)
@@ -62,17 +67,17 @@ if [ -z "${PROJECT+x}" ]
 then
     PROJECT="${DEFAULT_PROJECT}"
 fi
-
-# Set defaults if no options specified
 if [ -z "${WEBSERVER+x}" ]
 then
     WEBSERVER="${DEFAULT_WEBSERVER}"
 fi
-
-# Set defaults if no options specified
 if [ -z "${BACKEND+x}" ]
 then
     BACKEND="${DEFAULT_BACKEND}"
+fi
+if [ -z "${DATABASE+x}" ]
+then
+    DATABASE="${DEFAULT_DATABASE}"
 fi
 
 help() {
@@ -82,7 +87,8 @@ Usage: ${PROGNAME} [ { -p | --project } <project-name> ] [ { -w | --webserver } 
 -v    --version                                                  Print the version.
 -p    --project            STRING                                The project name.
 -w    --webserver          STRING                                The chosen webserver.
--b    --backend            INT                                   The chosen backend server.
+-b    --backend            STRING                                The chosen backend server.
+-d    --database           STRING                                The chosen database.
 EOF
 
 exit 2
@@ -126,14 +132,6 @@ check_root() {
 # Install package from repository
 install_package() {
     printf "%-50s" "${1} installation"
-#    # Check if package is already installed
-#    if dnf list installed -q "${1}" 1> /dev/null 2> /dev/null
-#    then
-#        printf " \\033[0;31mFAIL\\033[0m\\n"
-#        printf 'E: %s is already installed.\n' "${1}" >&2
-#        exit 4
-#    fi
-
     # Install
     if ! dnf -yq --best install "${@}" 1> /dev/null 2> /dev/null
     then
@@ -208,8 +206,7 @@ install_mariadb() {
     install_package "mariadb-server"
     # Start
     enable_package "mariadb"
-
-    mysql_secure_installation 1> /dev/null 2> /dev/null <<EOF
+    mysql_secure_installation <<EOF
 
 y
 y
@@ -233,7 +230,7 @@ main() {
     # Check root permissions
     check_root
     # Install and configure services
-    install_nginx
+    install_"${WEBSERVER}"
     install_php-fpm
     install_mariadb "${DB_PASSWORD}"
 
@@ -259,7 +256,7 @@ main() {
     su - "${PROJECT}" -c "cp /opt/${PROJECT}/${PROJECT}/.env.example /opt/${PROJECT}/${PROJECT}/.env 1> /dev/null 2> /dev/null"
 # add to env ? what does it do ?
     sed -i 's/DB_USERNAME=.*/DB_USERNAME=root/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i "s/DB_PASSWORD=.*/DB_USERNAME=${DB_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     su - "${PROJECT}" -c "cd ${PROJECT} && php artisan storage:link 1> /dev/null 2> /dev/null"
 # what does it do ?
 # add bootstrap and auth ?
@@ -275,8 +272,8 @@ main() {
     setfacl -Rm d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"
-    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":r-x,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/public /opt/"${PROJECT}"/"${PROJECT}"/resources /opt/"${PROJECT}"/"${PROJECT}"/vendor
-    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/storage
+    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":r-x,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":r-x,g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/public /opt/"${PROJECT}"/"${PROJECT}"/resources /opt/"${PROJECT}"/"${PROJECT}"/vendor
+    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":r-x,g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/storage
     printf " \\033[0;32mOK\\033[0m\\n";
 
     # Permissions step 3
@@ -295,11 +292,21 @@ main() {
     printf " \\033[0;32mOK\\033[0m\\n";
 
     # Open ports
-    firewall-cmd --zone public --add-service http --add-service https 1> /dev/null 2> /dev/null
-    firewall-cmd --permanent --zone public --add-service http --add-service https 1> /dev/null 2> /dev/null
+    printf "%-50s" "firewall rules"
+    if ! firewall-cmd --zone public --add-service http --add-service https 1> /dev/null 2> /dev/null
+    then
+        printf " \\033[0;31mFAIL\\033[0m\\n"
+        printf 'E: Cannot install firewall rules.\n' >&2
+        exit
+    fi
+    if ! firewall-cmd --permanent --zone public --add-service http --add-service https 1> /dev/null 2> /dev/null
+    then
+        printf " \\033[0;31mFAIL\\033[0m\\n"
+        printf 'E: Cannot enable firewall rules.\n' >&2
+        exit
+    fi
+    printf " \\033[0;32mOK\\033[0m\\n";
 
-# add cleaning function
-# group laravel specific
 # prepare to deal with other servers
 # nginx default blocks
 # unix sockets
@@ -310,7 +317,14 @@ main() {
 # generate random password for mariadb
 # add project user db
 
-    systemctl restart nginx php-fpm mariadb 1> /dev/null 2> /dev/null
+    printf "%-50s" "restarting services"
+    if ! systemctl restart "${WEBSERVER}" "${BACKEND}" "${DATABASE}" 1> /dev/null 2> /dev/null
+    then
+        printf " \\033[0;31mFAIL\\033[0m\\n"
+        printf 'E: Cannot restart services.\n' >&2
+        exit
+    fi
+    printf " \\033[0;32mOK\\033[0m\\n";
 
     exit 0
 }
