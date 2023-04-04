@@ -126,16 +126,16 @@ check_root() {
 # Install package from repository
 install_package() {
     printf "%-50s" "${1} installation"
-    # Check if package is already installed
-    if dnf list installed -q "${1}" 1> /dev/null 2> /dev/null
-    then
-        printf " \\033[0;31mFAIL\\033[0m\\n"
-        printf 'E: %s is already installed.\n' "${1}" >&2
-        exit 4
-    fi
+#    # Check if package is already installed
+#    if dnf list installed -q "${1}" 1> /dev/null 2> /dev/null
+#    then
+#        printf " \\033[0;31mFAIL\\033[0m\\n"
+#        printf 'E: %s is already installed.\n' "${1}" >&2
+#        exit 4
+#    fi
 
     # Install
-    if ! dnf -yq install "${@}" 1> /dev/null 2> /dev/null
+    if ! dnf -yq --best install "${@}" 1> /dev/null 2> /dev/null
     then
         printf " \\033[0;31mFAIL\\033[0m\\n"
         printf 'E: %s installation failed\n' "${1}" >&2
