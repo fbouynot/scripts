@@ -60,7 +60,7 @@ EOF
 exit 2
 }
 
-# Deal with argument pairs
+# Deal with arguments
 while [[ $# -gt 0 ]]
 do
     key="${1}"
@@ -152,13 +152,15 @@ enable_package() {
 
 # Install nginx
 install_nginx() {
+    local -r PROJECT="${1}"
+    local -r FQDN="${2}"
     # Allow worker_processes mode auto
     setsebool -P httpd_setrlimit 1
 
     # Install
     install_package nginx nginx-core nginx-filesystem nginx-mimetypes
     # Configure
-    cat <<EOF > /etc/nginx/conf.d/"${PROJECT}".conf
+    cat > /etc/nginx/conf.d/"${PROJECT}".conf <<EOF
 # PHP-FPM FastCGI server
 # network or unix domain socket configuration
 
@@ -169,43 +171,43 @@ upstream netconf {
 server {
         listen 80;
         server_name ${FQDN};
-        return 301 https://$host$request_uri;
-}
+#        return 301 https://\$host\$request_uri;
+#}
 
-server {
-        listen 80 default_server;
-        server_name _;
-        return 444;
-}
+#server {
+#        listen 80 default_server;
+#        server_name _;
+#        return 444;
+#}
 
-server {
-        listen          443 ssl http2 default_server;
-        listen          [::]:443 ssl http2 default_server;
-        server_name     _;
+#server {
+#        listen          443 ssl http2 default_server;
+#        listen          [::]:443 ssl http2 default_server;
+#        server_name     _;
 
-        ssl_certificate "/etc/nginx/certificate.pem";
-        ssl_certificate_key "/etc/nginx/priv-key.pem";
-        ssl_session_cache shared:SSL:1m;
-        ssl_session_timeout  10m;
-        ssl_ciphers PROFILE=SYSTEM;
-        ssl_prefer_server_ciphers on;
+#        ssl_certificate "/etc/nginx/certificate.pem";
+#        ssl_certificate_key "/etc/nginx/priv-key.pem";
+#        ssl_session_cache shared:SSL:1m;
+#        ssl_session_timeout  10m;
+#        ssl_ciphers PROFILE=SYSTEM;
+#        ssl_prefer_server_ciphers on;
 
-        return 444;
-}
-server {
-        listen       443 ssl http2;
-        listen       [::]:443 ssl http2;
+#        return 444;
+#}
+#server {
+#        listen       443 ssl http2;
+#        listen       [::]:443 ssl http2;
         server_name  ${FQDN};
-        root         /opt/netconf/netconf/public;
+        root         /opt/${PROJECT}/${PROJECT}/public;
 
-        ssl_certificate "/etc/nginx/certificate.pem";
-        ssl_certificate_key "/etc/nginx/priv-key.pem";
-        ssl_session_cache shared:SSL:1m;
-        ssl_session_timeout  10m;
-        ssl_ciphers PROFILE=SYSTEM;
-        ssl_prefer_server_ciphers on;
+#        ssl_certificate "/etc/nginx/certificate.pem";
+#        ssl_certificate_key "/etc/nginx/priv-key.pem";
+#        ssl_session_cache shared:SSL:1m;
+#        ssl_session_timeout  10m;
+#        ssl_ciphers PROFILE=SYSTEM;
+#        ssl_prefer_server_ciphers on;
 
-        include /etc/nginx/default.d/netconf.conf;
+#        include /etc/nginx/default.d/netconf.conf;
 
         index           index.php;
         charset utf-8;
@@ -213,7 +215,7 @@ server {
         gzip_types text/css application/javascript text/javascript application/x-javascript image/svg+xml text/plain text/xsd text/xsl text/xml image/x-icon;
 
         location / {
-            try_files   $uri $uri/ /index.php?$query_string;
+            try_files   \$uri \$uri/ /index.php?\$query_string;
         }
 
         error_page 404 /404.html;
@@ -289,7 +291,7 @@ main() {
     # Check root permissions
     check_root
     # Install and configure services
-    install_"${WEBSERVER}"
+    install_"${WEBSERVER}" "${PROJECT}" "${FQDN}"
     install_"${BACKEND}"
     install_"${DATABASE}" "${DB_PASSWORD}"
 
@@ -316,7 +318,7 @@ main() {
 # add to env ? what does it do ?
     sed -i 's/DB_HOST=.*/#DB_HOST=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/DB_PORT=.*/#DB_PORT=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i 's/DB_SOCKET=.*/DB_SOCKET=/var/lib/mysql/mysql.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/DB_SOCKET=.*/DB_SOCKET=\/var\/lib\/mysql\/mysql\.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/DB_USERNAME=.*/DB_USERNAME=root/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/APP_URL=.*/APP_URL=${FQDN}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
