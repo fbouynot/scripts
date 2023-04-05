@@ -158,7 +158,7 @@ install_nginx() {
     # Install
     install_package nginx nginx-core nginx-filesystem nginx-mimetypes
     # Configure
-    cat <<EOF
+    cat <<EOF > /etc/nginx/conf.d/"${PROJECT}".conf
 # PHP-FPM FastCGI server
 # network or unix domain socket configuration
 
