@@ -31,6 +31,8 @@ readonly DEFAULT_PROJECT=laravel
 readonly DEFAULT_WEBSERVER=nginx
 readonly DEFAULT_BACKEND=php-fpm
 readonly DEFAULT_DATABASE=mariadb
+readonly DEFAULT_FQDN=localhost
+
 
 help() {
     cat << EOF
@@ -42,6 +44,7 @@ Options:
     -w    --webserver          <string>                              The chosen webserver (default: ${DEFAULT_WEBSERVER})
     -b    --backend            <string>                              The chosen backend server (default: ${DEFAULT_BACKEND})
     -d    --database           <string>                              The chosen database (default: ${DEFAULT_DATABASE})
+    -f    --fqdn               <string>                              The chosen fqdn (default: ${DEFAULT_FQDN})
     -h    --help                                                     Print this message and exit
     -V    --version                                                  Print the version and exit
 EOF
@@ -79,6 +82,10 @@ do
             export DATABASE="${2}"
             shift # consume -d
             ;;
+        -f|--fqdn)
+            export FQDN="${2}"
+            shift # consume -f
+            ;;
         -h|--help)
             help
             ;;
@@ -96,6 +103,7 @@ PROJECT="${PROJECT:-$DEFAULT_PROJECT}"
 WEBSERVER="${WEBSERVER:-$DEFAULT_WEBSERVER}"
 BACKEND="${BACKEND:-$DEFAULT_BACKEND}"
 DATABASE="${DATABASE:-$DEFAULT_DATABASE}"
+FQDN="${FQDN:-$DEFAULT_FQDN}"
 
 # Change directory to base script directory
 cd "$(dirname "${0}")"
@@ -149,6 +157,74 @@ install_nginx() {
 
     # Install
     install_package nginx nginx-core nginx-filesystem nginx-mimetypes
+    # Configure
+    cat <<EOF
+# PHP-FPM FastCGI server
+# network or unix domain socket configuration
+
+upstream netconf {
+        server unix:/run/php-fpm/${PROJECT}.sock;
+}
+
+server {
+        listen 80;
+        server_name ${FQDN};
+        return 301 https://$host$request_uri;
+}
+
+server {
+        listen 80 default_server;
+        server_name _;
+        return 444;
+}
+
+server {
+        listen          443 ssl http2 default_server;
+        listen          [::]:443 ssl http2 default_server;
+        server_name     _;
+
+        ssl_certificate "/etc/nginx/certificate.pem";
+        ssl_certificate_key "/etc/nginx/priv-key.pem";
+        ssl_session_cache shared:SSL:1m;
+        ssl_session_timeout  10m;
+        ssl_ciphers PROFILE=SYSTEM;
+        ssl_prefer_server_ciphers on;
+
+        return 444;
+}
+server {
+        listen       443 ssl http2;
+        listen       [::]:443 ssl http2;
+        server_name  ${FQDN};
+        root         /opt/netconf/netconf/public;
+
+        ssl_certificate "/etc/nginx/certificate.pem";
+        ssl_certificate_key "/etc/nginx/priv-key.pem";
+        ssl_session_cache shared:SSL:1m;
+        ssl_session_timeout  10m;
+        ssl_ciphers PROFILE=SYSTEM;
+        ssl_prefer_server_ciphers on;
+
+        include /etc/nginx/default.d/netconf.conf;
+
+        index           index.php;
+        charset utf-8;
+        gzip on;
+        gzip_types text/css application/javascript text/javascript application/x-javascript image/svg+xml text/plain text/xsd text/xsl text/xml image/x-icon;
+
+        location / {
+            try_files   $uri $uri/ /index.php?$query_string;
+        }
+
+        error_page 404 /404.html;
+            location = /40x.html {
+        }
+
+        error_page 500 502 503 504 /50x.html;
+            location = /50x.html {
+        }
+}
+EOF
     # Start
     enable_package "nginx"
 
@@ -238,8 +314,12 @@ main() {
     su - "${PROJECT}" -c "composer create-project laravel/laravel ${PROJECT} 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cp /opt/${PROJECT}/${PROJECT}/.env.example /opt/${PROJECT}/${PROJECT}/.env 1> /dev/null 2> /dev/null"
 # add to env ? what does it do ?
+    sed -i 's/DB_HOST=.*/#DB_HOST=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/DB_PORT=.*/#DB_PORT=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/DB_SOCKET=.*/DB_SOCKET=/var/lib/mysql/mysql.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/DB_USERNAME=.*/DB_USERNAME=root/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i "s/APP_URL=.*/APP_URL=${FQDN}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     su - "${PROJECT}" -c "cd ${PROJECT} && php artisan storage:link 1> /dev/null 2> /dev/null"
 # what does it do ?
 # add bootstrap and auth ?
