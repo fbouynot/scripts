@@ -207,8 +207,19 @@ server {
 #        ssl_ciphers PROFILE=SYSTEM;
 #        ssl_prefer_server_ciphers on;
 
-#        include /etc/nginx/default.d/netconf.conf;
+# pass the PHP scripts to FastCGI server
+#
+# See conf.d/php-fpm.conf for socket configuration
+#
+index index.php index.html index.htm;
 
+location ~ \.php$ {
+    try_files $uri =404;
+    fastcgi_index  index.php;
+    include        fastcgi_params;
+    fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+    fastcgi_pass   netconf;
+}
         index           index.php;
         charset utf-8;
         gzip on;
