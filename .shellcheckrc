@@ -1,0 +1,2 @@
+# Ignore unreachable code error because we call variable function name
+disable=SC2317
