@@ -14,12 +14,10 @@
 # Install laravel on fedora with lemp
 #
 
-# When a command fails, bash exits instead of continuing with the rest of the script
-set -o errexit
-# This will make the script fail, when accessing an unset variable
-set -o nounset
-# This will ensure that a pipeline command is treated as failed, even if one command in the pipeline fails
-set -o pipefail
+# -e: When a command fails, bash exits instead of continuing with the rest of the script
+# -u: This will make the script fail, when accessing an unset variable
+# -o pipefail: This will ensure that a pipeline command is treated as failed, even if one command in the pipeline fails
+set -euo pipefail
 # Enable debug mode by running your script as TRACE=1 ./script.sh instead of ./script.sh
 if [[ "${TRACE-0}" == "1" ]]
 then
@@ -191,7 +189,7 @@ install_mariadb() {
     install_package "mariadb-server"
     # Start
     enable_package "mariadb"
-    mysql_secure_installation <<EOF
+    mysql_secure_installation 1> /dev/null 2>/dev/null <<EOF
 
 y
 y
@@ -215,9 +213,9 @@ main() {
     # Check root permissions
     check_root
     # Install and configure services
-    eval "install_${WEBSERVER}"
-    install_php-fpm
-    install_mariadb "${DB_PASSWORD}"
+    install_"${WEBSERVER}"
+    install_"${BACKEND}"
+    install_"${DATABASE}" "${DB_PASSWORD}"
 
     # Create project user
     mkdir -p /opt/"${PROJECT}"
