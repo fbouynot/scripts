@@ -215,7 +215,7 @@ main() {
     # Check root permissions
     check_root
     # Install and configure services
-    install_"${WEBSERVER}"
+    eval "install_${WEBSERVER}"
     install_php-fpm
     install_mariadb "${DB_PASSWORD}"
 
