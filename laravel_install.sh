@@ -34,61 +34,18 @@ readonly DEFAULT_WEBSERVER=nginx
 readonly DEFAULT_BACKEND=php-fpm
 readonly DEFAULT_DATABASE=mariadb
 
-# Deal with argument pairs
-while [[ $# -gt 1 ]]
-do
-    key="${1}"
-
-    case "${key}" in
-        -p|--project)
-            export PROJECT="${2}"
-            shift # consume -s
-            ;;
-        -w|--webserver)
-            export WEBSERVER="${2}"
-            shift # consume -s
-            ;;
-        -b|--backend)
-            export BACKEND="${2}"
-            shift # consume -s
-            ;;
-        -d|--database)
-            export DATABASE="${2}"
-            shift # consume -s
-            ;;
-        *)
-        ;;
-    esac
-    shift # consume $1
-done
-
-# Set defaults if no options specified
-if [ -z "${PROJECT+x}" ]
-then
-    PROJECT="${DEFAULT_PROJECT}"
-fi
-if [ -z "${WEBSERVER+x}" ]
-then
-    WEBSERVER="${DEFAULT_WEBSERVER}"
-fi
-if [ -z "${BACKEND+x}" ]
-then
-    BACKEND="${DEFAULT_BACKEND}"
-fi
-if [ -z "${DATABASE+x}" ]
-then
-    DATABASE="${DEFAULT_DATABASE}"
-fi
-
 help() {
     cat << EOF
-Usage: ${PROGNAME} [ { -p | --project } <project-name> ] [ { -w | --webserver } <webserver-name> ] [ { -b | --backend } <backend-name> ]
--h    --help                                                     Print this message.
--v    --version                                                  Print the version.
--p    --project            STRING                                The project name.
--w    --webserver          STRING                                The chosen webserver.
--b    --backend            STRING                                The chosen backend server.
--d    --database           STRING                                The chosen database.
+Usage: ${PROGNAME} [ { -p | --project } <project-name> ] [ { -w | --webserver } <webserver-name> ] [ { -b | --backend } <backend-name> ] [-Vh]
+Install laravel and the web stack on GNU/linux.
+
+Options:
+    -p    --project            <string>                              The project name (default: ${DEFAULT_PROJECT})
+    -w    --webserver          <string>                              The chosen webserver (default: ${DEFAULT_WEBSERVER})
+    -b    --backend            <string>                              The chosen backend server (default: ${DEFAULT_BACKEND})
+    -d    --database           <string>                              The chosen database (default: ${DEFAULT_DATABASE})
+    -h    --help                                                     Print this message and exit
+    -V    --version                                                  Print the version and exit
 EOF
 
 exit 2
@@ -102,17 +59,45 @@ EOF
 exit 2
 }
 
-# Display help message if -h --help -help h or help parameter
-if [[ "${1-}" =~ ^-*h(elp)?$ ]]
-then
-    help
-fi
+# Deal with argument pairs
+while [[ $# -gt 0 ]]
+do
+    key="${1}"
 
-# Display version message if -v --version -version v or version parameter
-if [[ "${1-}" =~ ^-*v(ersion)?$ ]]
-then
-    version
-fi
+    case "${key}" in
+        -p|--project)
+            export PROJECT="${2}"
+            shift # consume -p
+            ;;
+        -w|--webserver)
+            export WEBSERVER="${2}"
+            shift # consume -w
+            ;;
+        -b|--backend)
+            export BACKEND="${2}"
+            shift # consume -b
+            ;;
+        -d|--database)
+            export DATABASE="${2}"
+            shift # consume -d
+            ;;
+        -h|--help)
+            help
+            ;;
+        -V|--version)
+            version
+            ;;
+        *)
+        ;;
+    esac
+    shift # consume $1
+done
+
+# Set defaults if no options specified
+PROJECT="${PROJECT:-$DEFAULT_PROJECT}"
+WEBSERVER="${WEBSERVER:-$DEFAULT_WEBSERVER}"
+BACKEND="${BACKEND:-$DEFAULT_BACKEND}"
+DATABASE="${DATABASE:-$DEFAULT_DATABASE}"
 
 # Change directory to base script directory
 cd "$(dirname "${0}")"
@@ -148,7 +133,7 @@ install_package() {
 enable_package() {
     printf "%-50s" "${1} activation"
     # Start
-    if ! systemctl enable --now "${1}" 1> /dev/null 2> /dev/null
+    if ! systemctl enable --now --quiet "${1}" 1> /dev/null 2> /dev/null
     then
         printf " \\033[0;31mFAIL\\033[0m\\n"
         printf 'E: cannot start %s\n' "${1}" >&2
