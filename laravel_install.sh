@@ -214,10 +214,10 @@ server {
 index index.php index.html index.htm;
 
 location ~ \.php$ {
-    try_files $uri =404;
+    try_files \$uri =404;
     fastcgi_index  index.php;
     include        fastcgi_params;
-    fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+    fastcgi_param  SCRIPT_FILENAME  \$document_root\$fastcgi_script_name;
     fastcgi_pass   netconf;
 }
         index           index.php;
@@ -253,14 +253,36 @@ install_php-fpm() {
     # enable if TCP socket only
 
     # Install
-    install_package "php-fpm"
+    install_package php-fpm php-opcache
 
     # Add backend user if it does not exists
     id -u "${BACKEND}" 1> /dev/null 2> /dev/null || useradd "${BACKEND}" --system --no-create-home --user-group --shell /sbin/nologin
     # Configure php-fpm default pool user and group
-    sed -i "s/user =.*/user = ${BACKEND}/g" /etc/php-fpm.d/www.conf
-    sed -i "s/group =.*/group = ${BACKEND}/g" /etc/php-fpm.d/www.conf
-#dedicated pool ?
+    cp /etc/php-fpm.d/www.conf /etc/php-fpm.d/"${PROJECT}".conf
+#    echo ';nothing' > /etc/php-fpm.d/www.conf
+#    sed -i "s/user =.*/user = ${BACKEND}/g" /etc/php-fpm.d/"${PROJECT}".conf
+#    sed -i "s/group =.*/group = ${BACKEND}/g" /etc/php-fpm.d/"${PROJECT}".conf
+#    sed -i "s/listen =.*/listen = listen = \/run\/php-fpm\/${BACKEND}\.sock/g" /etc/php-fpm.d/"${PROJECT}".conf
+#    sed -i "s/^\[www\]$/\[${BACKEND}\]/g" /etc/php-fpm.d/"${PROJECT}".conf
+    cat > /etc/php-fpm.d/"${PROJECT}".conf <<EOF
+[${PROJECT}]
+user = ${BACKEND}
+group = ${BACKEND}
+listen = /run/php-fpm/${PROJECT}.sock
+listen.acl_users = apache,nginx
+listen.allowed_clients = 127.0.0.1
+pm = dynamic
+pm.max_children = 50
+pm.start_servers = 5
+pm.min_spare_servers = 5
+pm.max_spare_servers = 35
+slowlog = /var/log/php-fpm/www-slow.log
+php_admin_value[error_log] = /var/log/php-fpm/www-error.log
+php_admin_flag[log_errors] = on
+php_value[session.save_handler] = files
+php_value[session.save_path]    = /var/lib/php/session
+php_value[soap.wsdl_cache_dir]  = /var/lib/php/wsdlcache
+EOF
 
     # Start
     enable_package "php-fpm"
@@ -349,7 +371,7 @@ main() {
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"
     setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":r-x,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":r-x,g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/public /opt/"${PROJECT}"/"${PROJECT}"/resources /opt/"${PROJECT}"/"${PROJECT}"/vendor
-    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":r-x,g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/storage
+    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":rwx,g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/storage /opt/"${PROJECT}"/"${PROJECT}"/bootstrap/cache
     printf " \\033[0;32mOK\\033[0m\\n";
 
     # Permissions step 3
@@ -360,8 +382,8 @@ main() {
     printf "%-50s" "permissions step 3: MAC"
     semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
     semanage fcontext -a -t httpd_sys_content_t "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
-    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
-    semanage fcontext -a -t httpd_sys_rw_content_t "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
+    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/(storage|bootstrap/cache)(/.*)?"
+    semanage fcontext -a -t httpd_sys_rw_content_t "/opt/${PROJECT}/${PROJECT}/(storage|bootstrap/cache)(/.*)?"
     semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
     semanage fcontext -a -t httpd_log_t "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
     restorecon -RF /opt/"${PROJECT}"
