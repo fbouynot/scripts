@@ -164,7 +164,7 @@ install_nginx() {
 # PHP-FPM FastCGI server
 # network or unix domain socket configuration
 
-upstream netconf {
+upstream ${PROJECT} {
         server unix:/run/php-fpm/${PROJECT}.sock;
 }
 
@@ -218,7 +218,7 @@ location ~ \.php$ {
     fastcgi_index  index.php;
     include        fastcgi_params;
     fastcgi_param  SCRIPT_FILENAME  \$document_root\$fastcgi_script_name;
-    fastcgi_pass   netconf;
+    fastcgi_pass   ${PROJECT};
 }
         index           index.php;
         charset utf-8;
