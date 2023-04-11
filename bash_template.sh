@@ -110,7 +110,7 @@ log_and_run() {
         "${ARG_COMMAND}" | tee -a "${LOG_FILE}"
         EXIT_CODE=${PIPESTATUS[0]}
     else
-        "${ARG_COMMAND}" 2>&1 > "${LOG_FILE}"
+        "${ARG_COMMAND}" > "${LOG_FILE}" 2>&1
         EXIT_CODE=$?
     fi
     echo "Returned: ${EXIT_CODE}" >> "${LOG_FILE}"
