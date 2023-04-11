@@ -32,7 +32,7 @@ readonly DEFAULT_QUIET=0
 
 help() {
     cat << EOF
-Usage: ${PROGNAME} [ { -l | --logfile } <logfile> ] [-Vvh]
+Usage: ${PROGNAME} [ { -l | --logfile } <logfile> ] [-Vhqv]
 Install laravel and the web stack on GNU/linux.
 
 Options:
@@ -152,7 +152,7 @@ check_root() {
 # Main function
 main() {
     log_and_run 'Checking permissions' 'check_root'
-    log_and_run 'Print Hello World!' 'echo "Hello World!'"
+    log_and_run 'Print Hello World!' 'echo "Hello World!"'
 
     exit 0
 }
