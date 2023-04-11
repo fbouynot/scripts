@@ -100,20 +100,36 @@ log_and_run() {
     ARG_TEXT=$1
     ARG_COMMAND=$2
     
-    printf "%-50s" "${ARG_TEXT}"
+    if [[ "${QUIET}" == "0" ]]
+    then
+        printf "%-50s" "${ARG_TEXT}"
+    fi
     echo "${arg_text}" >> "${LOG_FILE}"
-    OUTPUT=$(bash -c "${ARG_COMMAND}" 2>&1)
-    EXIT_CODE=$?
-    echo "${tmp}" >> "${LOG_FILE}"
+    if [[ "${VERBOSITY}" != "0" ]]
+    then
+        "${ARG_COMMAND}" | tee -a "${LOG_FILE}"
+        EXIT_CODE=${PIPESTATUS[0]}
+    else
+        "${ARG_COMMAND}" 2>&1 > "${LOG_FILE}"
+        EXIT_CODE=$?
+    fi
     echo "Returned: ${EXIT_CODE}" >> "${LOG_FILE}"
 
     # print OK if the command ran successfully
     # or FAIL otherwise (non-zero exit code)
-    if [[ "${EXIT_CODE}" == "0" ]]; then
-        printf " \\033[0;32mOK\\033[0m\\n"
+    if [[ "${EXIT_CODE}" == "0" ]]
+    then
+        if [[ "${QUIET}" == "0" ]]
+        then
+            printf " \\033[0;32mOK\\033[0m\\n"
+        fi
     else
-        printf " \\033[0;31mFAIL\\033[0m\\n"
-        if [[ -n "${OUTPUT}" ]]; then
+        if [[ "${QUIET}" == "0" ]]
+        then
+            printf " \\033[0;31mFAIL\\033[0m\\n"
+        fi
+        if [[ -n "${OUTPUT}" ]]
+        then
             # print output in case of failure
             echo "${OUTPUT}"
         fi
@@ -135,10 +151,8 @@ check_root() {
 
 # Main function
 main() {
-    check_root
-    local HELLO
-    HELLO='Hello'
-    echo "${HELLO} ${WORLD}!"
+    log_and_run 'Checking permissions' 'check_root'
+    log_and_run 'Print Hello World!' 'echo "Hello World!'"
 
     exit 0
 }
