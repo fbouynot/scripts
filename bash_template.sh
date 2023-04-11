@@ -95,7 +95,7 @@ cd "$(dirname "${0}")"
 
 log_and_run() {
     # Explicitly define our arguments
-    local ARG_TEXT ARG_COMMAND EXIT_CODE OUTPUT LOG_FILE
+    local ARG_TEXT ARG_COMMAND EXIT_CODE OUTPUT
 
     ARG_TEXT=$1
     ARG_COMMAND=$2
