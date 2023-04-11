@@ -26,17 +26,20 @@ fi
 
 readonly PROGNAME="${0##*/}"
 readonly VERSION='1.0.0'
-
-readonly DEFAULT_WORLD=Earth
+readonly DEFAULT_LOG_FILE=${PROGNAME}.log
+readonly DEFAULT_VERBOSITY=0
+readonly DEFAULT_QUIET=0
 
 help() {
     cat << EOF
-Usage: ${PROGNAME} [ { -w | --world } <world-name> ] [-Vh]
+Usage: ${PROGNAME} [ { -l | --logfile } <logfile> ] [-Vvh]
 Install laravel and the web stack on GNU/linux.
 
 Options:
-    -w    --webserver          <string>                              The chosen webserver (default: ${DEFAULT_WORLD})
     -h    --help                                                     Print this message and exit
+    -l    --logfile          <string>                                The chosen logfile (default: ${DEFAULT_LOG_FILE})
+    -q    --quiet                                                    No output at all
+    -v    --verbose                                                  Print the verbose output
     -V    --version                                                  Print the version and exit
 EOF
 
@@ -57,12 +60,21 @@ do
     key="${1}"
 
     case "${key}" in
-        -w|--world)
-            export WORLD="${2}"
-            shift # consume -w
-            ;;
         -h|--help)
             help
+            ;;
+        -l|--logfile)
+            export WORLD="${2}"
+            shift # consume -l
+            ;;
+        -q|--quiet)
+            export QUIET=1
+            ;;
+        -v|--verbose)
+            export VERBOSITY=1
+            ;;
+        -vv)
+            export VERBOSITY=2
             ;;
         -V|--version)
             version
@@ -74,10 +86,40 @@ do
 done
 
 # Set defaults if no options specified
-WORLD="${WORLD:-$DEFAULT_WORLD}"
+LOG_FILE="${LOG_FILE:-$DEFAULT_LOG_FILE}"
+VERBOSITY="${VERBOSITY:-$DEFAULT_VERBOSITY}"
+QUIET="${QUIET:-$DEFAULT_QUIET}"
 
 # Change directory to base script directory
 cd "$(dirname "${0}")"
+
+log_and_run() {
+    # Explicitly define our arguments
+    local ARG_TEXT ARG_COMMAND EXIT_CODE OUTPUT LOG_FILE
+
+    ARG_TEXT=$1
+    ARG_COMMAND=$2
+    
+    printf "%-50s" "${ARG_TEXT}"
+    echo "${arg_text}" >> "${LOG_FILE}"
+    OUTPUT=$(bash -c "${ARG_COMMAND}" 2>&1)
+    EXIT_CODE=$?
+    echo "${tmp}" >> "${LOG_FILE}"
+    echo "Returned: ${EXIT_CODE}" >> "${LOG_FILE}"
+
+    # print OK if the command ran successfully
+    # or FAIL otherwise (non-zero exit code)
+    if [[ "${EXIT_CODE}" == "0" ]]; then
+        printf " \\033[0;32mOK\\033[0m\\n"
+    else
+        printf " \\033[0;31mFAIL\\033[0m\\n"
+        if [[ -n "${OUTPUT}" ]]; then
+            # print output in case of failure
+            echo "${OUTPUT}"
+        fi
+    fi
+    return "${EXIT_CODE}"
+}
 
 # Check root permissions
 check_root() {
