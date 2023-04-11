@@ -104,7 +104,7 @@ log_and_run() {
     then
         printf "%-50s" "${ARG_TEXT}"
     fi
-    echo "${arg_text}" >> "${LOG_FILE}"
+    echo "${ARG_TEXT}" >> "${LOG_FILE}"
     if [[ "${VERBOSITY}" != "0" ]]
     then
         "${ARG_COMMAND}" | tee -a "${LOG_FILE}"
