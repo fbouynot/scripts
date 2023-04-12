@@ -110,7 +110,8 @@ check_root() {
 main() {
     # Check for root permissions
     check_root
-    # Print Hello World! on stout
+
+    # Print Hello World! on stdout
     echo ${MESSAGE}
 
     # Compress program with xz
