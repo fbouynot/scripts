@@ -24,12 +24,14 @@ then
     set -o xtrace
 fi
 
+# Define constants
 readonly PROGNAME="${0##*/}"
 readonly VERSION='1.0.0'
 readonly DEFAULT_LOG_FILE=${PROGNAME}.log
 readonly DEFAULT_VERBOSITY=0
 readonly DEFAULT_QUIET=0
 
+# Help function: print the help message
 help() {
     cat << EOF
 Usage: ${PROGNAME} [ { -l | --logfile } <logfile> ] [-Vhqv]
@@ -46,6 +48,7 @@ EOF
 exit 2
 }
 
+# Version function: print the version and license
 version() {
     cat << EOF
 ${PROGNAME} version ${VERSION} under GPLv3 licence.
@@ -93,6 +96,7 @@ QUIET="${QUIET:-$DEFAULT_QUIET}"
 # Change directory to base script directory
 cd "$(dirname "${0}")"
 
+# Function to log and run the command
 log_and_run() {
     # Explicitly define our arguments
     local ARG_TEXT ARG_COMMAND EXIT_CODE OUTPUT
@@ -100,23 +104,30 @@ log_and_run() {
     ARG_TEXT=$1
     ARG_COMMAND=$2
 
+    # Print nothing if quiet option
     if [[ "${QUIET}" == "0" ]]
     then
         printf "%-50s" "${ARG_TEXT}"
     fi
     echo "${ARG_TEXT}" >> "${LOG_FILE}"
+    # Print and log stderr if verbose, log stderr if not
     if [[ "${VERBOSITY}" != "0" ]]
     then
-        "${ARG_COMMAND}" | tee -a "${LOG_FILE}"
+        set +o pipefail
+        eval "${ARG_COMMAND}" | tee -a "${LOG_FILE}"
         EXIT_CODE=${PIPESTATUS[0]}
+        set -o pipefail
     else
-        "${ARG_COMMAND}" > "${LOG_FILE}" 2>&1
+        set +e
+        eval "${ARG_COMMAND}" > /dev/null 2>> "${LOG_FILE}"
         EXIT_CODE=$?
+        set -e
     fi
     echo "Returned: ${EXIT_CODE}" >> "${LOG_FILE}"
 
-    # print OK if the command ran successfully
-    # or FAIL otherwise (non-zero exit code)
+    # Print OK if the command ran successfully
+    # Print FAIL otherwise (non-zero exit code)
+    # Print nothing if option quiet set
     if [[ "${EXIT_CODE}" == "0" ]]
     then
         if [[ "${QUIET}" == "0" ]]
@@ -128,12 +139,8 @@ log_and_run() {
         then
             printf " \\033[0;31mFAIL\\033[0m\\n"
         fi
-        if [[ -n "${OUTPUT}" ]]
-        then
-            # print output in case of failure
-            echo "${OUTPUT}"
-        fi
     fi
+
     return "${EXIT_CODE}"
 }
 
@@ -143,7 +150,7 @@ check_root() {
     if [ "${EUID}" -ne 0 ]
     then
         printf 'E: please run as root\n' >&2
-        exit 3
+        return 3
     fi
 
     return 0
@@ -151,6 +158,7 @@ check_root() {
 
 # Main function
 main() {
+    echo '' > "${LOG_FILE}" || (echo "E: Cannot write the log file: ${LOG_FILE}" >&2 && exit 4)
     log_and_run 'Checking permissions' 'check_root'
     log_and_run 'Print Hello World!' 'echo "Hello World!"'
 
