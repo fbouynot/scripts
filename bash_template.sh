@@ -112,7 +112,7 @@ main() {
     check_root
 
     # Print Hello World! on stdout
-    echo ${MESSAGE}
+    echo "${MESSAGE}"
 
     # Compress program with xz
     case "${VERBOSITY}" in
