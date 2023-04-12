@@ -99,7 +99,7 @@ log_and_run() {
 
     ARG_TEXT=$1
     ARG_COMMAND=$2
-    
+
     if [[ "${QUIET}" == "0" ]]
     then
         printf "%-50s" "${ARG_TEXT}"
