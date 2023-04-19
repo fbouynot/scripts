@@ -350,6 +350,10 @@ main() {
     su - "${PROJECT}" -c "cp /opt/${PROJECT}/${PROJECT}/.env.example /opt/${PROJECT}/${PROJECT}/.env 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cd ${PROJECT} && php artisan key:generate 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cd ${PROJECT} && php artisan config:cache 1> /dev/null 2> /dev/null"
+    su - "${PROJECT}" -c "cd ${PROJECT}/${PROJECT}/ && composer require laravel/ui 1> /dev/null 2> /dev/null"
+    su - "${PROJECT}" -c "cd ${PROJECT}/${PROJECT}/ && php artisan ui bootstrap --auth 1> /dev/null 2> /dev/null"
+    su - "${PROJECT}" -c "cd ${PROJECT}/${PROJECT}/ && npm install 1> /dev/null 2> /dev/null"
+    su - "${PROJECT}" -c "cd ${PROJECT}/${PROJECT}/ && npm run build 1> /dev/null 2> /dev/null"
 # add to env ? what does it do ?
     sed -i 's/DB_HOST=.*/#DB_HOST=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/DB_PORT=.*/#DB_PORT=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
