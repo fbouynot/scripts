@@ -376,6 +376,7 @@ main() {
     setfacl -Rm d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"
     setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"
+    setfacl -Rm u:"${BACKEND}":r-x,d:u:"${BACKEND}":--x /opt/"${PROJECT}"/"${PROJECT}"/app
     setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":r-x,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":r-x,g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/public /opt/"${PROJECT}"/"${PROJECT}"/resources /opt/"${PROJECT}"/"${PROJECT}"/vendor
     setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":rwx,g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/storage /opt/"${PROJECT}"/"${PROJECT}"/bootstrap/cache
     printf " \\033[0;32mOK\\033[0m\\n";
