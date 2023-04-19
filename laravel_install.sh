@@ -416,6 +416,7 @@ main() {
 # display ok / fail lnms like for permissions and firewall
 # generate random password for mariadb
 # add project user db
+# dev vs prod, --no-dev app_url app_env
 
     printf "%-50s" "restarting services"
     if ! systemctl restart "${WEBSERVER}" "${BACKEND}" "${DATABASE}" 1> /dev/null 2> /dev/null
