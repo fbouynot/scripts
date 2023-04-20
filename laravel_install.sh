@@ -269,7 +269,7 @@ install_php-fpm() {
 user = ${BACKEND}
 group = ${BACKEND}
 listen = /run/php-fpm/${PROJECT}.sock
-listen.acl_users = apache,nginx
+listen.acl_users = ${WEBSERVER}
 listen.allowed_clients = 127.0.0.1
 pm = dynamic
 pm.max_children = 50
