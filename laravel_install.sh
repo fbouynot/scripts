@@ -329,6 +329,7 @@ main() {
     install_"${DATABASE}" "${DB_PASSWORD}"
 
     # Create project user
+    rm -rf /opt/"${PROJECT}"
     mkdir -p /opt/"${PROJECT}"
     id -u "${PROJECT}" 1> /dev/null 2> /dev/null || useradd "${PROJECT}" -d /opt/"${PROJECT}" -M -r -s "$(which bash)"
 
@@ -356,6 +357,8 @@ main() {
     sed -i '2s/.*/@import "@fontsource\/nunito";/g' /opt/"${PROJECT}"/"${PROJECT}"/resources/sass/app.scss
     sed -i '3s/.*/@import "@fontsource\/nunito\/500.css";/g' /opt/"${PROJECT}"/"${PROJECT}"/resources/sass/app.scss
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && npm run build 1> /dev/null 2> /dev/null"
+    sed -i '12d' /opt/"${PROJECT}"/"${PROJECT}"/resources/views/layouts/app.blade.php
+    sed -i '12d' /opt/"${PROJECT}"/"${PROJECT}"/resources/views/layouts/app.blade.php
     sed -i '12d' /opt/"${PROJECT}"/"${PROJECT}"/resources/views/layouts/app.blade.php
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:cache 1> /dev/null 2> /dev/null"
 # add to env ? what does it do ?
