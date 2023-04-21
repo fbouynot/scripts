@@ -355,9 +355,9 @@ main() {
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && npm install 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && npm install @fontsource/nunito 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && npm run build 1> /dev/null 2> /dev/null"
-    sed -i '2s/.*/@import "@fontsource\/nunito";/g' /opt/${PROJECT}/${PROJECT}/resources/sass/app.scss
-    sed -i '3s/.*/@import "@fontsource\/nunito/500.css";/g' /opt/${PROJECT}/${PROJECT}/resources/sass/app.scss
-    sed -i '12d' /opt/${PROJECT}/${PROJECT}/resources/views/layouts/app.blade.php
+    sed -i '2s/.*/@import "@fontsource\/nunito";/g' /opt/"${PROJECT}"/"${PROJECT}"/resources/sass/app.scss
+    sed -i '3s/.*/@import "@fontsource\/nunito/500.css";/g' /opt/"${PROJECT}"/"${PROJECT}"/resources/sass/app.scss
+    sed -i '12d' /opt/"${PROJECT}"/"${PROJECT}"/resources/views/layouts/app.blade.php
 # add to env ? what does it do ?
     sed -i 's/DB_HOST=.*/#DB_HOST=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/DB_PORT=.*/#DB_PORT=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
