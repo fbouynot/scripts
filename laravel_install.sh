@@ -13,6 +13,14 @@
 #
 # Install laravel on fedora with lemp
 #
+# TODO:
+# Prepare to deal with other servers
+# Verbose ?
+# Log file ?
+# Check distro ? (at least fedora vs centos)
+# Display ok / fail lnms like for permissions / everything
+# Dev vs prod, --no-dev app_url app_env
+# Factorization
 
 # -e: When a command fails, bash exits instead of continuing with the rest of the script
 # -u: This will make the script fail, when accessing an unset variable
@@ -31,12 +39,13 @@ readonly DEFAULT_PROJECT=laravel
 readonly DEFAULT_WEBSERVER=nginx
 readonly DEFAULT_BACKEND=php-fpm
 readonly DEFAULT_DATABASE=mariadb
+readonly DEFAULT_CACHE=redis
 readonly DEFAULT_FQDN=localhost
 
 
 help() {
     cat << EOF
-Usage: ${PROGNAME} [ { -p | --project } <project-name> ] [ { -w | --webserver } <webserver-name> ] [ { -b | --backend } <backend-name> ] [-Vh]
+Usage: ${PROGNAME} [ { -p | --project } <project-name> ] [ { -w | --webserver } <webserver-name> ] [ { -b | --backend } <backend-name> ] [ { -c | --cache } <cache-name> ] [-Vh]
 Install laravel and the web stack on GNU/linux.
 
 Options:
@@ -44,6 +53,7 @@ Options:
     -w    --webserver          <string>                              The chosen webserver (default: ${DEFAULT_WEBSERVER})
     -b    --backend            <string>                              The chosen backend server (default: ${DEFAULT_BACKEND})
     -d    --database           <string>                              The chosen database (default: ${DEFAULT_DATABASE})
+    -c    --cache              <string>                              The chosen database (default: ${DEFAULT_CACHE})
     -f    --fqdn               <string>                              The chosen fqdn (default: ${DEFAULT_FQDN})
     -h    --help                                                     Print this message and exit
     -V    --version                                                  Print the version and exit
@@ -82,6 +92,10 @@ do
             export DATABASE="${2}"
             shift # consume -d
             ;;
+        -c|--cache)
+            export CACHE="${2}"
+            shift # consume -c
+            ;;
         -f|--fqdn)
             export FQDN="${2}"
             shift # consume -f
@@ -103,6 +117,7 @@ PROJECT="${PROJECT:-$DEFAULT_PROJECT}"
 WEBSERVER="${WEBSERVER:-$DEFAULT_WEBSERVER}"
 BACKEND="${BACKEND:-$DEFAULT_BACKEND}"
 DATABASE="${DATABASE:-$DEFAULT_DATABASE}"
+CACHE="${CACHE:-$DEFAULT_CACHE}"
 FQDN="${FQDN:-$DEFAULT_FQDN}"
 
 # Change directory to base script directory
@@ -254,7 +269,7 @@ install_php-fpm() {
     # enable if TCP socket only
 
     # Install
-    install_package php-fpm php-opcache
+    install_package php-fpm php-opcache php-pecl-redis
 
     # Add backend user if it does not exists
     id -u "${BACKEND}" 1> /dev/null 2> /dev/null || useradd "${BACKEND}" --system --no-create-home --user-group --shell /sbin/nologin
@@ -293,12 +308,12 @@ EOF
 
 # Install mariadb
 install_mariadb() {
-    # Allow the backend to access mariadb
-    setsebool -P httpd_can_network_connect_db 1
+    # Allow the backend to access mariadb if TCP socket
+    # setsebool -P httpd_can_network_connect_db 1
 
     # Remove old database
-    dnf remove -yq mariadb-server
-    rm -rf /var/lib/mysql/*
+    dnf remove -yq mariadb-server 1> /dev/null 2> /dev/null
+    rm -rf /var/lib/mysql/* 1> /dev/null 2> /dev/null
 
     # Install
     install_package "mariadb-server"
@@ -313,7 +328,7 @@ EOF
 
     mysql -sfu root <<EOF
 -- set root password
-UPDATE mysql.user SET Password=PASSWORD('${1}') WHERE User='root';
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${1}';
 -- delete anonymous users
 DELETE FROM mysql.user WHERE User='';
 -- delete remote root capabilities
@@ -329,12 +344,24 @@ EOF
     return 0
 }
 
+# Install redis
+install_redis() {
+    # Install
+    install_package "redis"
+    # Start
+    enable_package "redis"
+
+    return 0
+}
+
+
 # Main function
 main() {
-    local DB_PASSWORD DB_PROJECT_PASSWORD
+    local DB_PASSWORD DB_PROJECT_PASSWORD REDIS_PASSWORD
     set +o pipefail
     DB_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
     DB_PROJECT_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
+    REDIS_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
     set -o pipefail
     # Check root permissions
     check_root
@@ -342,8 +369,17 @@ main() {
     install_"${WEBSERVER}" "${PROJECT}" "${FQDN}"
     install_"${BACKEND}"
     install_"${DATABASE}" "${DB_PASSWORD}"
+    install_"${CACHE}"
 
-    mysql -sfu root <<EOF
+    cat >> /etc/redis/redis.conf <<EOF
+unixsocket /run/redis/redis.sock
+unixsocketperm 770
+requirepass ${REDIS_PASSWORD}
+EOF
+    usermod -a -G redis ${BACKEND}
+    usermod -a -G redis ${PROJECT}
+    systemctl restart "${CACHE}"
+    mysql -sfu root -p"${DB_PASSWORD}" <<EOF
 -- create project database
 CREATE DATABASE ${PROJECT};
 -- create project user
@@ -394,6 +430,11 @@ EOF
     sed -i "s/DB_USERNAME=.*/DB_USERNAME=${PROJECT}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PROJECT_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/APP_URL=.*/APP_URL=${FQDN}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/CACHE_DRIVER=.*/CACHE_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/REDIS_HOST=.*/REDIS_HOST=\/run\/redis\/redis.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/REDIS_PASSWORD=.*/REDIS_PASSWORD=${REDIS_PASSWORD}/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/REDIS_PORT=.*/REDIS_PORT=null/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:clear 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan cache:clear 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:cache 1> /dev/null 2> /dev/null"
@@ -448,15 +489,6 @@ EOF
         exit
     fi
     printf " \\033[0;32mOK\\033[0m\\n";
-
-# prepare to deal with other servers
-# nginx default blocks
-# unix sockets
-# verbose ?
-# log file ?
-# check distro ? (at least fedora vs centos)
-# display ok / fail lnms like for permissions and firewall
-# dev vs prod, --no-dev app_url app_env
 
     printf "%-50s" "restarting services"
     if ! systemctl restart "${WEBSERVER}" "${BACKEND}" "${DATABASE}" 1> /dev/null 2> /dev/null
