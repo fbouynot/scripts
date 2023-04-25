@@ -376,8 +376,8 @@ unixsocket /run/redis/redis.sock
 unixsocketperm 770
 requirepass ${REDIS_PASSWORD}
 EOF
-    usermod -a -G redis ${BACKEND}
-    usermod -a -G redis ${PROJECT}
+    usermod -a -G redis "${BACKEND}"
+    usermod -a -G redis "${PROJECT}"
     systemctl restart "${CACHE}"
     mysql -sfu root -p"${DB_PASSWORD}" <<EOF
 -- create project database
