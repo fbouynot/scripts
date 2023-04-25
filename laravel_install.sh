@@ -433,7 +433,7 @@ EOF
     sed -i 's/CACHE_DRIVER=.*/CACHE_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/REDIS_HOST=.*/REDIS_HOST=\/run\/redis\/redis.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i 's/REDIS_PASSWORD=.*/REDIS_PASSWORD=${REDIS_PASSWORD}/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=${REDIS_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/REDIS_PORT=.*/REDIS_PORT=null/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:clear 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan cache:clear 1> /dev/null 2> /dev/null"
