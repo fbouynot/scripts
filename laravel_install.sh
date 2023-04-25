@@ -124,6 +124,7 @@ check_root() {
 install_package() {
     printf "%-50s" "${1} installation"
     # Install
+    dnf -yq remove  "${@}" 1> /dev/null 2> /dev/null
     if ! dnf -yq --best install "${@}" 1> /dev/null 2> /dev/null
     then
         printf " \\033[0;31mFAIL\\033[0m\\n"
@@ -293,23 +294,47 @@ EOF
 # Install mariadb
 install_mariadb() {
     # Allow the backend to access mariadb
-    # setsebool -P httpd_can_network_connect_db 1
-    # enable if TCP socket only
+    setsebool -P httpd_can_network_connect_db 1
+
+    # Remove old database
+    dnf remove -yq mariadb-server
+    rm -rf /var/lib/mysql/*
 
     # Install
     install_package "mariadb-server"
+    cat >> /etc/my.cnf.d/mariadb-server.cnf <<EOF
+datadir=/var/lib/mysql
+socket=/var/lib/mysql/mysql.sock
+log-error=/var/log/mariadb/mariadb.log
+pid-file=/run/mariadb/mariadb.pid
+EOF
     # Start
     enable_package "mariadb"
-    mysql_secure_installation 1> /dev/null 2>/dev/null <<EOF
+#    mysql_secure_installation 1> /dev/null 2>/dev/null <<EOF
+#
+#y
+#y
+#${1}
+#${1}
+#y
+#y
+#y
+#y
+#EOF
 
-y
-y
-${1}
-${1}
-y
-y
-y
-y
+mysql -sfu root <<EOF
+-- set root password
+UPDATE mysql.user SET Password=PASSWORD('${1}') WHERE User='root';
+-- delete anonymous users
+DELETE FROM mysql.user WHERE User='';
+-- delete remote root capabilities
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+-- drop database 'test'
+DROP DATABASE IF EXISTS test;
+-- also make sure there are lingering permissions to it
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+-- make changes immediately
+FLUSH PRIVILEGES;
 EOF
 
     return 0
@@ -317,9 +342,10 @@ EOF
 
 # Main function
 main() {
-    local DB_PASSWORD
+    local DB_PASSWORD DB_PROJECT_PASSWORD
     set +o pipefail
     DB_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
+    DB_PROJECT_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
     set -o pipefail
     # Check root permissions
     check_root
@@ -327,6 +353,17 @@ main() {
     install_"${WEBSERVER}" "${PROJECT}" "${FQDN}"
     install_"${BACKEND}"
     install_"${DATABASE}" "${DB_PASSWORD}"
+
+    mysql -sfu root <<EOF
+-- create project database
+CREATE DATABASE ${PROJECT};
+-- create project user
+CREATE USER '${PROJECT}'@localhost IDENTIFIED BY '${DB_PROJECT_PASSWORD}';
+-- grants permissions for project user on project database
+GRANT ALL PRIVILEGES ON ${PROJECT}.* TO '${PROJECT}'@localhost;
+-- make changes immediately
+FLUSH PRIVILEGES;
+EOF
 
     # Create project user
     rm -rf /opt/"${PROJECT}"
@@ -365,10 +402,14 @@ main() {
     sed -i 's/DB_HOST=.*/#DB_HOST=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/DB_PORT=.*/#DB_PORT=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/DB_SOCKET=.*/DB_SOCKET=\/var\/lib\/mysql\/mysql\.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i 's/DB_USERNAME=.*/DB_USERNAME=root/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i "s/DB_USERNAME=.*/DB_USERNAME=${PROJECT}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PROJECT_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/APP_URL=.*/APP_URL=${FQDN}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
+    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:clear 1> /dev/null 2> /dev/null"
+    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan cache:clear 1> /dev/null 2> /dev/null"
+    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:cache 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cd ${PROJECT} && php artisan storage:link 1> /dev/null 2> /dev/null"
+    su - "${PROJECT}" -c "cd ${PROJECT} && php artisan migrate 1> /dev/null 2> /dev/null"
 # what does it do ?
 # add bootstrap and auth ?
 
@@ -381,11 +422,11 @@ main() {
     # Add group dev if it does not exists
     getent group devs 1> /dev/null 2> /dev/null || groupadd devs
     setfacl -Rm d:g:devs:rwx /opt/"${PROJECT}"
-    setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"
-    setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"
-    setfacl -Rm u:"${BACKEND}":r-x,d:u:"${BACKEND}":--x /opt/"${PROJECT}"/"${PROJECT}"/app
-    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":r-x,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":r-x,g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/public /opt/"${PROJECT}"/"${PROJECT}"/resources /opt/"${PROJECT}"/"${PROJECT}"/vendor
-    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":rwx,g:devs:rwx /opt/"${PROJECT}"/"${PROJECT}"/storage /opt/"${PROJECT}"/"${PROJECT}"/bootstrap/cache
+    setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx,g:"${PROJECT}":rwx,d:g:"${PROJECT}":rwx /opt/"${PROJECT}"
+    setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx,g:"${PROJECT}":rwx,d:g:"${PROJECT}":rwx /opt/"${PROJECT}"/"${PROJECT}"
+    setfacl -Rm u:"${BACKEND}":r-x,d:u:"${BACKEND}":--x,g:"${PROJECT}":rwx,d:g:"${PROJECT}":rwx /opt/"${PROJECT}"/"${PROJECT}"/app
+    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":r-x,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":r-x,g:devs:rwx,g:"${PROJECT}":rwx,d:g:"${PROJECT}":rwx /opt/"${PROJECT}"/"${PROJECT}"/public /opt/"${PROJECT}"/"${PROJECT}"/resources /opt/"${PROJECT}"/"${PROJECT}"/vendor
+    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":rwx,g:devs:rwx,g:"${PROJECT}":rwx,d:g:"${PROJECT}":rwx /opt/"${PROJECT}"/"${PROJECT}"/storage /opt/"${PROJECT}"/"${PROJECT}"/bootstrap/cache
     printf " \\033[0;32mOK\\033[0m\\n";
 
     # Permissions step 3
