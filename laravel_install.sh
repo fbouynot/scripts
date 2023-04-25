@@ -310,19 +310,8 @@ pid-file=/run/mariadb/mariadb.pid
 EOF
     # Start
     enable_package "mariadb"
-#    mysql_secure_installation 1> /dev/null 2>/dev/null <<EOF
-#
-#y
-#y
-#${1}
-#${1}
-#y
-#y
-#y
-#y
-#EOF
 
-mysql -sfu root <<EOF
+    mysql -sfu root <<EOF
 -- set root password
 UPDATE mysql.user SET Password=PASSWORD('${1}') WHERE User='root';
 -- delete anonymous users
@@ -467,8 +456,6 @@ EOF
 # log file ?
 # check distro ? (at least fedora vs centos)
 # display ok / fail lnms like for permissions and firewall
-# generate random password for mariadb
-# add project user db
 # dev vs prod, --no-dev app_url app_env
 
     printf "%-50s" "restarting services"
