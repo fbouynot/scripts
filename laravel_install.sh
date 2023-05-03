@@ -435,9 +435,11 @@ EOF
     sed -i 's/REDIS_HOST=.*/REDIS_HOST=\/run\/redis\/redis.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=${REDIS_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/REDIS_PORT=.*/REDIS_PORT=null/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    { echo "SESSION_SECURE_COOKIE=true" # if nodev
-    echo "SESSION_SAME_SITE_COOKIE=Strict"
-    echo "SESSION_DOMAIN=${FQDN}" } >> /opt/"${PROJECT}"/"${PROJECT}"/.env
+cat<<EOF>>/opt/"${PROJECT}"/"${PROJECT}"/.env
+SESSION_SECURE_COOKIE=true
+SESSION_SAME_SITE_COOKIE=Strict
+SESSION_DOMAIN=${FQDN}
+EOF
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:clear 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan cache:clear 1> /dev/null 2> /dev/null"
     su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:cache 1> /dev/null 2> /dev/null"
