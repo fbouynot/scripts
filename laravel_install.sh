@@ -470,11 +470,13 @@ EOF
 
     install_package "policycoreutils-python-utils"
     printf "%-50s" "permissions step 3: MAC"
-#    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
+    set +e
+    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
+    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
+    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
+    set -e
     semanage fcontext -a -t httpd_sys_content_t "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
-#    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
     semanage fcontext -a -t httpd_sys_rw_content_t "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
-#    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
     semanage fcontext -a -t httpd_log_t "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
     restorecon -RF /opt/"${PROJECT}"
     printf " \\033[0;32mOK\\033[0m\\n";
