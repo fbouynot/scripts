@@ -269,7 +269,7 @@ install_php-fpm() {
     # enable if TCP socket only
 
     # Install
-    install_package php-fpm php-opcache php-pecl-redis
+    install_package php-fpm php-opcache php-pdo php-mysqlnd php-pecl-redis
 
     # Add backend user if it does not exists
     id -u "${BACKEND}" 1> /dev/null 2> /dev/null || useradd "${BACKEND}" --system --no-create-home --user-group --shell /sbin/nologin
@@ -371,6 +371,11 @@ main() {
     install_"${DATABASE}" "${DB_PASSWORD}"
     install_"${CACHE}"
 
+    # Create project user
+    rm -rf /opt/"${PROJECT}"
+    mkdir -p /opt/"${PROJECT}"
+    id -u "${PROJECT}" 1> /dev/null 2> /dev/null || useradd "${PROJECT}" -d /opt/"${PROJECT}" -M -r -s "$(which bash)"
+
     cat >> /etc/redis/redis.conf <<EOF
 unixsocket /run/redis/redis.sock
 unixsocketperm 770
@@ -389,11 +394,6 @@ GRANT ALL PRIVILEGES ON ${PROJECT}.* TO '${PROJECT}'@localhost;
 -- make changes immediately
 FLUSH PRIVILEGES;
 EOF
-
-    # Create project user
-    rm -rf /opt/"${PROJECT}"
-    mkdir -p /opt/"${PROJECT}"
-    id -u "${PROJECT}" 1> /dev/null 2> /dev/null || useradd "${PROJECT}" -d /opt/"${PROJECT}" -M -r -s "$(which bash)"
 
     # Permissions step 1
     # Grants the project user and group read and write rights on project folder
@@ -426,7 +426,7 @@ EOF
 # add to env ? what does it do ?
     sed -i 's/DB_HOST=.*/#DB_HOST=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/DB_PORT=.*/#DB_PORT=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i 's/DB_SOCKET=.*/DB_SOCKET=\/var\/lib\/mysql\/mysql\.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    echo 'DB_SOCKET=/var/lib/mysql/mysql.sock' >> /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/DB_USERNAME=.*/DB_USERNAME=${PROJECT}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PROJECT_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/APP_URL=.*/APP_URL=${FQDN}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
@@ -434,7 +434,7 @@ EOF
     sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/REDIS_HOST=.*/REDIS_HOST=\/run\/redis\/redis.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=${REDIS_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i 's/REDIS_PORT=.*/REDIS_PORT=null/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/REDIS_PORT=.*/REDIS_PORT=0/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
 cat<<EOF>>/opt/"${PROJECT}"/"${PROJECT}"/.env
 SESSION_SECURE_COOKIE=true
 SESSION_SAME_SITE_COOKIE=Strict
@@ -470,11 +470,11 @@ EOF
 
     install_package "policycoreutils-python-utils"
     printf "%-50s" "permissions step 3: MAC"
-    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
+#    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
     semanage fcontext -a -t httpd_sys_content_t "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
-    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
+#    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
     semanage fcontext -a -t httpd_sys_rw_content_t "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
-    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
+#    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
     semanage fcontext -a -t httpd_log_t "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
     restorecon -RF /opt/"${PROJECT}"
     printf " \\033[0;32mOK\\033[0m\\n";
