@@ -8,7 +8,7 @@
 #
 # @package nftables-apply
 # @author <felix.bouynot@setenforce.one>
-# @link https://gist.github.com/fbouynot/00f89f4bcaa2b1fa4b9f70b24ebc8cc6
+# @link https://github.com/fbouynot/scripts/blob/main/nftables-apply
 # @copyright <felix.bouynot@setenforce.one>
 #
 # Free adaptation for nftables of iptables-apply (https://github.com/wertarbyte/iptables/blob/master/iptables-apply)
