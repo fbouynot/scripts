@@ -34,7 +34,7 @@ readonly DEFAULT_MESSAGE="Hello, World!"
 # Help function: print the help message
 help() {
     cat << EOF
-Usage: ${PROGNAME} [-Vhqv]
+Usage: ${PROGNAME} [-Vhmv]
 Print "Hello, World!"
 
 Options:
