@@ -59,20 +59,9 @@ do
 done
 
 # Set defaults if no options specified
-if [ -z "${SOURCE_FILE+x}" ]
-then
-    SOURCE_FILE="${DEFAULT_SOURCE_FILE}"
-fi
-
-if [ -z "${DESTINATION_FILE+x}" ]
-then
-    DESTINATION_FILE="${DEFAULT_DESTINATION_FILE}"
-fi
-
-if [ -z "${TIMEOUT+x}" ]
-then
-    TIMEOUT="${DEFAULT_TIMEOUT}"
-fi
+SOURCE_FILE="${SOURCE_FILE:-$DEFAULT_SOURCE_FILE}"
+DESTINATION_FILE="${DESTINATION_FILE:-$DEFAULT_DESTINATION_FILE}"
+TIMEOUT="${TIMEOUT:-$DEFAULT_TIMEOUT}"
 
 help() {
     cat << EOF
