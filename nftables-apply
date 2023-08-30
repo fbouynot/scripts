@@ -28,7 +28,7 @@ then
 fi
 
 readonly PROGNAME="${0##*/}"
-readonly VERSION="1.1.4"
+readonly VERSION="1.1.5"
 
 readonly DEFAULT_TIMEOUT=15
 readonly DEFAULT_DESTINATION_FILE=/etc/nftables.conf
