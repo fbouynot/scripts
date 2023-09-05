@@ -27,7 +27,7 @@ fi
 
 # Define constants
 readonly PROGNAME="${0##*/}"
-readonly VERSION='1.1.1'
+readonly VERSION='1.1.2'
 readonly RED='\033[0;31m'
 readonly NC='\033[0m' # No Color
 readonly DEFAULT_VERBOSITY=0
@@ -101,7 +101,7 @@ check_root() {
     # Check the command is run as root
     if [ "${EUID}" -ne 0 ]
     then
-        echo -e '${RED}E:${NC} please run as root\n' >&2
+        echo -e '${RED}E:${NC} please run as root' >&2
         exit 3
     fi
 
