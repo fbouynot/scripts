@@ -26,7 +26,7 @@ then
 fi
 
 readonly PROGNAME="${0##*/}"
-readonly VERSION="1.1.10"
+readonly VERSION="1.2.0"
 readonly RED='\033[0;31m'
 readonly NC='\033[0m' # No Color
 
@@ -44,7 +44,7 @@ Usage: ${PROGNAME} [-Vh] [ { -s | --source-file } <source-file> ] [ { -d | --des
 -t    --timeout            INT                                   The time to wait before rolling back.           (default: ${DEFAULT_TIMEOUT})
 EOF
 
-exit 2
+    exit 2
 }
 
 version() {
@@ -52,7 +52,7 @@ version() {
 ${PROGNAME} version ${VERSION} under GPLv3 licence.
 EOF
 
-exit 2
+    exit 2
 }
 
 # Deal with arguments
