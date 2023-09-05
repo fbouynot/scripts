@@ -26,46 +26,17 @@ then
 fi
 
 readonly PROGNAME="${0##*/}"
-readonly VERSION="1.1.6"
+readonly VERSION="1.1.7"
 
 readonly DEFAULT_TIMEOUT=15
 readonly DEFAULT_DESTINATION_FILE=/etc/nftables.conf
 readonly DEFAULT_SOURCE_FILE=/etc/nftables-candidate.conf
 
-# Deal with argument pairs
-while [[ $# -gt 1 ]]
-do
-    key="${1}"
-
-    case $key in
-        -s|--source-file)
-            export SOURCE_FILE="${2}"
-            shift # consume -s
-            ;;
-        -d|--destination-file)
-            export DESTINATION_FILE="${2}"
-            shift # consume -d
-            ;;
-        -t|--timeout)
-            export TIMEOUT="${2}"
-            shift # consume -t
-            ;;
-        *)
-        ;;
-    esac
-    shift # consume $1
-done
-
-# Set defaults if no options specified
-SOURCE_FILE="${SOURCE_FILE:-$DEFAULT_SOURCE_FILE}"
-DESTINATION_FILE="${DESTINATION_FILE:-$DEFAULT_DESTINATION_FILE}"
-TIMEOUT="${TIMEOUT:-$DEFAULT_TIMEOUT}"
-
 help() {
     cat << EOF
-Usage: ${PROGNAME} [ { -s | --source-file } <source-file> ] [ { -d | --destination-file } <destination-file> ] [ { -t | --timeout } <timeout> ]
+Usage: ${PROGNAME} [-Vh] [ { -s | --source-file } <source-file> ] [ { -d | --destination-file } <destination-file> ] [ { -t | --timeout } <timeout> ]
 -h    --help                                                     Print this message.
--v    --version                                                  Print the version.
+-V    --version                                                  Print the version.
 -s    --source-file        STRING                                The source file for candidate config.
 -d    --destination-file   STRING                                The destination file where to write the config.
 -t    --timeout            INT                                   The time to wait before rolling back.
@@ -82,20 +53,55 @@ EOF
 exit 2
 }
 
-# Display help message if -h --help -help h or help parameter
-if [[ "${1-}" =~ ^-*h(elp)?$ ]]
-then
-    help
-fi
+# Deal with argument pairs
+while [[ $# -gt 1 ]]
+do
+    key="${1}"
 
-# Display version message if -v --version -version v or version parameter
-if [[ "${1-}" =~ ^-*v(ersion)?$ ]]
-then
-    version
-fi
+    case $key in
+        -h|--help)
+            help
+            ;;
+        -s|--source-file)
+            export SOURCE_FILE="${2}"
+            shift # consume -s
+            ;;
+        -d|--destination-file)
+            export DESTINATION_FILE="${2}"
+            shift # consume -d
+            ;;
+        -t|--timeout)
+            export TIMEOUT="${2}"
+            shift # consume -t
+            ;;
+        -V|--version)
+            version
+            ;;
+        *)
+        ;;
+    esac
+    shift # consume $1
+done
+
+# Set defaults if no options specified
+SOURCE_FILE="${SOURCE_FILE:-$DEFAULT_SOURCE_FILE}"
+DESTINATION_FILE="${DESTINATION_FILE:-$DEFAULT_DESTINATION_FILE}"
+TIMEOUT="${TIMEOUT:-$DEFAULT_TIMEOUT}"
 
 # Change directory to base script directory
 cd "$(dirname "${0}")"
+
+# Check root permissions
+check_root() {
+    # Check the command is run as root
+    if [ "${EUID}" -ne 0 ]
+    then
+        printf 'E: please run as root\n' >&2
+        exit 3
+    fi
+
+    return 0
+}
 
 restore() {
     nft flush ruleset
@@ -115,11 +121,7 @@ save() {
 # Main function
 main() {
     # Check the command is run as root
-    if [ "${EUID}" -ne 0 ]
-    then
-        echo "E: please run as root" >&2
-        exit 3
-    fi
+    check_root
 
     # Check if we can read the destination file
     if [[ ! -r "${DESTINATION_FILE}" ]]
