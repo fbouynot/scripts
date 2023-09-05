@@ -39,9 +39,9 @@ help() {
 Usage: ${PROGNAME} [-Vh] [ { -s | --source-file } <source-file> ] [ { -d | --destination-file } <destination-file> ] [ { -t | --timeout } <timeout> ]
 -h    --help                                                     Print this message.
 -V    --version                                                  Print the version.
--s    --source-file        STRING                                The source file for candidate config.
--d    --destination-file   STRING                                The destination file where to write the config.
--t    --timeout            INT                                   The time to wait before rolling back.
+-s    --source-file        STRING                                The source file for candidate config.           (default: ${DEFAULT_SOURCE_FILE})
+-d    --destination-file   STRING                                The destination file where to write the config. (default: ${DEFAULT_DESTINATION_FILE})
+-t    --timeout            INT                                   The time to wait before rolling back.           (default: ${DEFAULT_TIMEOUT})
 EOF
 
 exit 2
