@@ -110,6 +110,9 @@ restore() {
     nft -f /tmp/nftables.conf.bak
     rm -f /tmp/nftables.conf.bak
 
+    # Start fail2ban
+    systemctl start fail2ban 2>/dev/null
+
     return 0
 }
 
@@ -151,6 +154,9 @@ main() {
         sed -i '1s/^/flush ruleset\n/' "${SOURCE_FILE}"
     fi
 
+    # Stop fail2ban
+    systemctl stop fail2ban 2>/dev/null
+
     # Apply new ruleset, rollback if timeout
     timeout "${TIMEOUT}"s nft -f "${SOURCE_FILE}" || (echo -e "${RED}E:${NC} timeout while applying new configuration, rolling back to the previous ruleset" >&2 && restore && exit 7)
 
@@ -168,6 +174,9 @@ main() {
         exit 8
     fi
     rm -f /tmp/nftables.conf.bak
+
+    # Start fail2ban
+    systemctl start fail2ban 2>/dev/null
 
     exit 0
 }
