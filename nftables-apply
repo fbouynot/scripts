@@ -27,6 +27,8 @@ fi
 
 readonly PROGNAME="${0##*/}"
 readonly VERSION="1.1.7"
+readonly RED='\033[0;31m'
+readonly NC='\033[0m' # No Color
 
 readonly DEFAULT_TIMEOUT=15
 readonly DEFAULT_DESTINATION_FILE=/etc/nftables.conf
@@ -96,8 +98,7 @@ check_root() {
     # Check the command is run as root
     if [ "${EUID}" -ne 0 ]
     then
-        printf 'E: please run as root\n' >&2
-        exit 3
+        echo -e '${RED}E:${NC} please run as root' >&2        exit 3
     fi
 
     return 0
@@ -126,7 +127,7 @@ main() {
     # Check if we can read the destination file
     if [[ ! -r "${DESTINATION_FILE}" ]]
     then
-        echo "E: cannot read ${DESTINATION_FILE}" >&2
+        echo -e "${RED}E:${NC} cannot read ${DESTINATION_FILE}" >&2
         exit 4
     fi
 
@@ -136,12 +137,12 @@ main() {
     # Check if we can read the source file
     if [[ ! -r "${SOURCE_FILE}" ]]
     then
-        echo "E: cannot read ${SOURCE_FILE}" >&2
+        echo -e "${RED}E:${NC} cannot read ${SOURCE_FILE}" >&2
         exit 5
     fi
 
     # Dry run new ruleset, exit if failures
-    nft -f "${SOURCE_FILE}" || (echo "E: Invalid rules, exiting" >&2 && exit 6)
+    nft -f "${SOURCE_FILE}" || (echo -e "${RED}E:${NC} Invalid rules, exiting" >&2 && exit 6)
 
     # Check the candidate configuration starts by flushing ruleset
     if [[ $(head -n 1 /etc/nftables-candidate.conf) != "flush ruleset" ]]
@@ -150,7 +151,7 @@ main() {
     fi
 
     # Apply new ruleset, rollback if timeout
-    timeout "${TIMEOUT}"s nft -f "${SOURCE_FILE}" || (echo "E: timeout while applying new configuration, rolling back to the previous ruleset" >&2 && restore && exit 7)
+    timeout "${TIMEOUT}"s nft -f "${SOURCE_FILE}" || (echo -e "${RED}E:${NC} timeout while applying new configuration, rolling back to the previous ruleset" >&2 && restore && exit 7)
 
     # Ask the user if they can open a new connection
     # If they can't, rollback
@@ -161,7 +162,7 @@ main() {
     then
         save
     else
-        echo -e "\nE: rolling back to the previous ruleset" >&2
+        echo -e "\n${RED}E:${NC} rolling back to the previous ruleset" >&2
         restore
         exit 8
     fi
