@@ -111,7 +111,10 @@ restore() {
     rm -f /tmp/nftables.conf.bak
 
     # Start fail2ban
-    systemctl start fail2ban 2>/dev/null
+    if $(systemctl is-enabled fail2ban > /dev/null 2>&1)
+    then
+        systemctl start fail2ban 2>/dev/null
+    fi
 
     return 0
 }
@@ -155,7 +158,10 @@ main() {
     fi
 
     # Stop fail2ban
-    systemctl stop fail2ban 2>/dev/null
+    if $(systemctl is-active fail2ban > /dev/null 2>&1)
+    then
+        systemctl stop fail2ban 2>/dev/null
+    fi
 
     # Apply new ruleset, rollback if timeout
     timeout "${TIMEOUT}"s nft -f "${SOURCE_FILE}" || (echo -e "${RED}E:${NC} timeout while applying new configuration, rolling back to the previous ruleset" >&2 && restore && exit 7)
@@ -176,7 +182,10 @@ main() {
     rm -f /tmp/nftables.conf.bak
 
     # Start fail2ban
-    systemctl start fail2ban 2>/dev/null
+    if $(systemctl is-enabled fail2ban > /dev/null 2>&1)
+    then
+        systemctl start fail2ban 2>/dev/null
+    fi
 
     exit 0
 }
