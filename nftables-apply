@@ -55,7 +55,7 @@ EOF
 exit 2
 }
 
-# Deal with argument pairs
+# Deal with arguments
 while [[ $# -gt 1 ]]
 do
     key="${1}"
