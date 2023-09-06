@@ -1,3 +1,3 @@
 # Ignore unreachable code error because we call variable function name
-disable=SC2317
-disable=SC2154
+#disable=SC2317
+#disable=SC2154
