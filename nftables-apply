@@ -25,6 +25,7 @@ then
     set -o xtrace
 fi
 
+# Define constants
 readonly PROGNAME="${0##*/}"
 readonly VERSION="1.2.1"
 readonly RED=$(tput setaf 1)
