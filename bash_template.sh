@@ -28,8 +28,8 @@ fi
 # Define constants
 readonly PROGNAME="${0##*/}"
 readonly VERSION='1.1.3'
-readonly RED='\033[0;31m'
-readonly NC='\033[0m' # No Color
+readonly RED=$(tput setaf 1)
+readonly NC=$(tput sgr0) # No Color
 readonly DEFAULT_VERBOSITY=0
 readonly DEFAULT_MESSAGE="Hello, World!"
 
