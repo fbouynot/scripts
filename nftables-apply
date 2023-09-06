@@ -26,9 +26,9 @@ then
 fi
 
 readonly PROGNAME="${0##*/}"
-readonly VERSION="1.2.0"
-readonly RED='\033[0;31m'
-readonly NC='\033[0m' # No Color
+readonly VERSION="1.2.1"
+readonly RED=$(tput setaf 1)
+readonly NC=$(tput sgr0) # No Color
 
 readonly DEFAULT_TIMEOUT=15
 readonly DEFAULT_DESTINATION_FILE=/etc/nftables.conf
