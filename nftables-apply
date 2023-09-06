@@ -26,14 +26,14 @@ then
 fi
 
 # Define constants
-declare -r PROGNAME="${0##*/}"
-declare -r VERSION="1.2.1"
-declare -r RED=$(tput setaf 1)
-declare -r NC=$(tput sgr0) # No Color
+readonly PROGNAME="${0##*/}"
+readonly VERSION="1.2.1"
+readonly RED="$(tput setaf 1)"
+readonly NC="$(tput sgr0)" # No Color
 
-declare -r DEFAULT_TIMEOUT=15
-declare -r DEFAULT_DESTINATION_FILE=/etc/nftables.conf
-declare -r DEFAULT_SOURCE_FILE=/etc/nftables-candidate.conf
+readonly DEFAULT_TIMEOUT=15
+readonly DEFAULT_DESTINATION_FILE=/etc/nftables.conf
+readonly DEFAULT_SOURCE_FILE=/etc/nftables-candidate.conf
 
 help() {
     cat << EOF
