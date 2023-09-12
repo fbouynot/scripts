@@ -31,8 +31,8 @@ fi
 # Define constants
 PROGNAME="${0##*/}"
 VERSION='1.1.5'
-RED=$(tput setaf 1)
-NC=$(tput sgr0) # No Color
+RED="$(tput setaf 1)"
+NC="$(tput sgr0)" # No Color
 
 DEFAULT_VERBOSITY=0
 DEFAULT_MESSAGE="Hello, World!"
