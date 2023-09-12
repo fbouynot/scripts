@@ -29,13 +29,15 @@ then
 fi
 
 # Define constants
-readonly PROGNAME="${0##*/}"
-readonly VERSION='1.1.5'
-readonly RED=$(tput setaf 1)
-readonly NC=$(tput sgr0) # No Color
+PROGNAME="${0##*/}"
+VERSION='1.1.5'
+RED=$(tput setaf 1)
+NC=$(tput sgr0) # No Color
 
-readonly DEFAULT_VERBOSITY=0
-readonly DEFAULT_MESSAGE="Hello, World!"
+DEFAULT_VERBOSITY=0
+DEFAULT_MESSAGE="Hello, World!"
+
+readonly PROGNAME VERSION RED NC DEFAULT_VERBOSITY DEFAULT_MESSAGE
 
 # Help function: print the help message
 help() {
