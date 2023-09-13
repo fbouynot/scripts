@@ -136,8 +136,6 @@ main() {
             ;;
     esac
 
-    rm -f "${TMPFILE}"
-
     exit 0
 }
 
