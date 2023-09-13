@@ -30,7 +30,7 @@ fi
 
 # Define constants
 PROGNAME="${0##*/}"
-VERSION='1.1.5'
+VERSION='1.1.6'
 RED="$(tput setaf 1)"
 NC="$(tput sgr0)" # No Color
 
@@ -52,7 +52,7 @@ Options:
     -V    --version                                                  Print the version and exit
 EOF
 
-exit 2
+    exit 2
 }
 
 # Version function: print the version and license
@@ -61,7 +61,7 @@ version() {
 ${PROGNAME} version ${VERSION} under GPLv3 licence.
 EOF
 
-exit 2
+    exit 2
 }
 
 # Display help message if there is no parameter
