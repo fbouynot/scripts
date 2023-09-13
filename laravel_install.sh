@@ -437,11 +437,11 @@ EOF
     sed -i "s/DB_USERNAME=.*/DB_USERNAME=${project}/g" /opt/"${project}"/"${project}"/.env
     sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${db_project_password}/g" /opt/"${project}"/"${project}"/.env
     sed -i "s/APP_URL=.*/APP_URL=${fqdn}/g" /opt/"${project}"/"${project}"/.env
-    sed -i 's/CACHE_DRIVER=.*/CACHE_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i 's/REDIS_HOST=.*/REDIS_HOST=\/run\/redis\/redis.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=${redis_password}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i 's/REDIS_PORT=.*/REDIS_PORT=0/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/CACHE_DRIVER=.*/CACHE_DRIVER=redis/g' /opt/"${project}"/"${project}"/.env
+    sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=redis/g' /opt/"${project}"/"${project}"/.env
+    sed -i 's/REDIS_HOST=.*/REDIS_HOST=\/run\/redis\/redis.sock/g' /opt/"${project}"/"${project}"/.env
+    sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=${redis_password}/g" /opt/"${project}"/"${project}"/.env
+    sed -i 's/REDIS_PORT=.*/REDIS_PORT=0/g' /opt/"${project}"/"${project}"/.env
 cat<<EOF>>/opt/"${project}"/"${project}"/.env
 SESSION_SECURE_COOKIE=true
 SESSION_SAME_SITE_COOKIE=Strict
