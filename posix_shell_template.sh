@@ -18,6 +18,9 @@
 # -u: This will make the script fail, when accessing an unset variable
 set -eu
 
+# Trap to remove TMPFILE if the script is stopped before the cleanup
+trap 'rm -f "${TMPFILE}"' EXIT
+
 # Replace the Internal Field Separator ' \n\t' by '\n\t' so you can loop through names with spaces 
 IFS=$(printf '\n\t')
 
@@ -30,8 +33,9 @@ fi
 # Define constants
 PROGNAME="${0##*/}"
 VERSION='1.1.8'
-RED="$(tput setaf 1)"
-NC="$(tput sgr0)" # No Color
+RED="$(tput setaf 1)" || exit 1
+NC="$(tput sgr0)" || exit 1 # No Color
+TMPFILE=$(mktemp) || exit 1
 
 DEFAULT_VERBOSITY=0
 DEFAULT_MESSAGE="Hello, World!"
@@ -131,6 +135,8 @@ main() {
             tar cJf archive.xz "${PROGNAME}" > /dev/null 2>&1
             ;;
     esac
+
+    rm -f "${TMPFILE}"
 
     exit 0
 }
