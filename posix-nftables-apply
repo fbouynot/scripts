@@ -18,6 +18,9 @@
 # -u: This will make the script fail, when accessing an unset variable
 set -eu
 
+# Trap to remove TMPFILE if the script is stopped before the cleanup
+trap 'rm -f "${TMPFILE}"' EXIT
+
 # Replace the Internal Field Separator ' \n\t' by '\n\t' so you can loop through names with spaces 
 IFS=$(printf '\n\t')
 
@@ -29,16 +32,17 @@ fi
 
 # Define constants
 PROGNAME="${0##*/}"
-VERSION='1.2.7'
-RED="$(tput setaf 1)"
-NC="$(tput sgr0)" # No Color
+VERSION='1.3.0'
+RED="$(tput setaf 1)" || exit 1
+NC="$(tput sgr0)" || exit 1 # No Color
+TMPFILE=$(mktemp) || exit 1
 
 DEFAULT_TIMEOUT=15
 DEFAULT_DESTINATION_FILE='/etc/nftables.conf'
 DEFAULT_SOURCE_FILE='/etc/nftables-candidate.conf'
 
 readonly PROGNAME VERSION RED NC DEFAULT_TIMEOUT DEFAULT_DESTINATION_FILE DEFAULT_SOURCE_FILE
-
+ 
 help() {
     cat << EOF
 Usage: ${PROGNAME} [-Vh] [ { -s | --source-file } <source-file> ] [ { -d | --destination-file } <destination-file> ] [ { -t | --timeout } <timeout> ]
@@ -113,8 +117,8 @@ check_root() {
 
 restore() {
     nft flush ruleset
-    nft -f /tmp/nftables.conf.bak
-    rm -f /tmp/nftables.conf.bak
+    nft -f "${TMPFILE}"
+    rm -f "${TMPFILE}"
 
     # Start fail2ban
     if systemctl is-enabled fail2ban > /dev/null 2>&1
@@ -145,7 +149,7 @@ main() {
     fi
 
     # Backup current ruleset
-    nft list ruleset > /tmp/nftables.conf.bak
+    nft list ruleset > "${TMPFILE}"
 
     # Check if we can read the source file
     if [ ! -r "${source_file}" ]
@@ -188,7 +192,7 @@ main() {
         restore
         exit 8
     fi
-    rm -f /tmp/nftables.conf.bak
+    rm -f "${TMPFILE}"
 
     # Start fail2ban
     if systemctl is-enabled fail2ban > /dev/null 2>&1
