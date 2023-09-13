@@ -8,7 +8,7 @@
 #
 # @package bash_template.sh
 # @author <felix.bouynot@setenforce.one>
-# @link https://github.com/fbouynot/scripts/blob/main/posix_shell_template
+# @link https://github.com/fbouynot/scripts/blob/main/posix_shell_template.sh
 # @copyright <felix.bouynot@setenforce.one>
 #
 # Print Hello world!
