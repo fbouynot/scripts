@@ -28,6 +28,9 @@
 # -o pipefail: This will ensure that a pipeline command is treated as failed, even if one command in the pipeline fails
 set -euo pipefail
 
+# Replace the Internal Field Separator ' \n\t' by '\n\t' so you can loop through names with spaces 
+IFS=$'\n\t'
+
 # Enable debug mode by running your script as TRACE=1 ./script.sh instead of ./script.sh
 if [[ "${TRACE-0}" == "1" ]]
 then
