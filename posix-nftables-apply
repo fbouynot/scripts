@@ -178,8 +178,7 @@ main() {
     printf "Can you establish NEW connections to the machine? (y/N) "
     stty -icanon -echo
     timeout "${timeout}" answer="$(dd bs=1 count=1 2> /dev/null)" 2>&1 || :
-    # shellcheck disable=SC2154
-    if [ "${answer}" = "y" ]
+    if [ "${answer:?}" = "y" ]
     then
         stty icanon echo
         save
