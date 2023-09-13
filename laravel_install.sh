@@ -87,19 +87,19 @@ do
             shift # consume -w
             ;;
         -b|--backend)
-            export BACKEND="${2}"
+            export backend="${2}"
             shift # consume -b
             ;;
         -d|--database)
-            export DATABASE="${2}"
+            export database="${2}"
             shift # consume -d
             ;;
         -c|--cache)
-            export CACHE="${2}"
+            export cache="${2}"
             shift # consume -c
             ;;
         -f|--fqdn)
-            export FQDN="${2}"
+            export fqdn="${2}"
             shift # consume -f
             ;;
         -h|--help)
@@ -117,10 +117,10 @@ done
 # Set defaults if no options specified
 project="${project:-$DEFAULT_PROJECT}"
 webserver="${webserver:-$DEFAULT_WEBSERVER}"
-BACKEND="${BACKEND:-$DEFAULT_BACKEND}"
-DATABASE="${DATABASE:-$DEFAULT_DATABASE}"
-CACHE="${CACHE:-$DEFAULT_CACHE}"
-FQDN="${FQDN:-$DEFAULT_FQDN}"
+backend="${backend:-$DEFAULT_BACKEND}"
+database="${database:-$DEFAULT_DATABASE}"
+cache="${cache:-$DEFAULT_CACHE}"
+fqdn="${fqdn:-$DEFAULT_FQDN}"
 
 # Change directory to base script directory
 cd "$(dirname "${0}")"
@@ -171,7 +171,7 @@ enable_package() {
 # Install nginx
 install_nginx() {
     local -r project="${1}"
-    local -r FQDN="${2}"
+    local -r fqdn="${2}"
     # Allow worker_processes mode auto
     setsebool -P httpd_setrlimit 1
 
@@ -188,7 +188,7 @@ upstream ${project} {
 
 server {
         listen 80;
-        server_name ${FQDN};
+        server_name ${fqdn};
 #        return 301 https://\$host\$request_uri;
 #}
 
@@ -215,7 +215,7 @@ server {
 #server {
 #        listen       443 ssl http2;
 #        listen       [::]:443 ssl http2;
-        server_name  ${FQDN};
+        server_name  ${fqdn};
         root         /opt/${project}/${project}/public;
 
 #        ssl_certificate "/etc/nginx/certificate.pem";
@@ -274,18 +274,18 @@ install_php-fpm() {
     install_package php-fpm php-opcache php-pdo php-mysqlnd php-pecl-redis
 
     # Add backend user if it does not exists
-    id -u "${BACKEND}" 1> /dev/null 2> /dev/null || useradd "${BACKEND}" --system --no-create-home --user-group --shell /sbin/nologin
+    id -u "${backend}" 1> /dev/null 2> /dev/null || useradd "${backend}" --system --no-create-home --user-group --shell /sbin/nologin
     # Configure php-fpm default pool user and group
     cp /etc/php-fpm.d/www.conf /etc/php-fpm.d/"${project}".conf
 #    echo ';nothing' > /etc/php-fpm.d/www.conf
-#    sed -i "s/user =.*/user = ${BACKEND}/g" /etc/php-fpm.d/"${project}".conf
-#    sed -i "s/group =.*/group = ${BACKEND}/g" /etc/php-fpm.d/"${project}".conf
-#    sed -i "s/listen =.*/listen = listen = \/run\/php-fpm\/${BACKEND}\.sock/g" /etc/php-fpm.d/"${project}".conf
-#    sed -i "s/^\[www\]$/\[${BACKEND}\]/g" /etc/php-fpm.d/"${project}".conf
+#    sed -i "s/user =.*/user = ${backend}/g" /etc/php-fpm.d/"${project}".conf
+#    sed -i "s/group =.*/group = ${backend}/g" /etc/php-fpm.d/"${project}".conf
+#    sed -i "s/listen =.*/listen = listen = \/run\/php-fpm\/${backend}\.sock/g" /etc/php-fpm.d/"${project}".conf
+#    sed -i "s/^\[www\]$/\[${backend}\]/g" /etc/php-fpm.d/"${project}".conf
     cat > /etc/php-fpm.d/"${project}".conf <<EOF
 [${project}]
-user = ${BACKEND}
-group = ${BACKEND}
+user = ${backend}
+group = ${backend}
 listen = /run/php-fpm/${project}.sock
 listen.acl_users = ${webserver}
 listen.allowed_clients = 127.0.0.1
@@ -359,19 +359,19 @@ install_redis() {
 
 # Main function
 main() {
-    local DB_PASSWORD DB_PROJECT_PASSWORD REDIS_PASSWORD
+    local db_password db_project_password redis_password
     set +o pipefail
-    DB_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
-    DB_PROJECT_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
-    REDIS_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
+    db_password=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
+    db_project_password=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
+    redis_password=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 128)
     set -o pipefail
     # Check root permissions
     check_root
     # Install and configure services
-    install_"${webserver}" "${project}" "${FQDN}"
-    install_"${BACKEND}"
-    install_"${DATABASE}" "${DB_PASSWORD}"
-    install_"${CACHE}"
+    install_"${webserver}" "${project}" "${fqdn}"
+    install_"${backend}"
+    install_"${database}" "${db_password}"
+    install_"${cache}"
 
     # Create project user
     rm -rf /opt/"${project}"
@@ -381,16 +381,16 @@ main() {
     cat >> /etc/redis/redis.conf <<EOF
 unixsocket /run/redis/redis.sock
 unixsocketperm 770
-requirepass ${REDIS_PASSWORD}
+requirepass ${redis_password}
 EOF
-    usermod -a -G redis "${BACKEND}"
+    usermod -a -G redis "${backend}"
     usermod -a -G redis "${project}"
-    systemctl restart "${CACHE}"
-    mysql -sfu root -p"${DB_PASSWORD}" <<EOF
+    systemctl restart "${cache}"
+    mysql -sfu root -p"${db_password}" <<EOF
 -- create project database
 CREATE DATABASE ${project};
 -- create project user
-CREATE USER '${project}'@localhost IDENTIFIED BY '${DB_PROJECT_PASSWORD}';
+CREATE USER '${project}'@localhost IDENTIFIED BY '${db_project_password}';
 -- grants permissions for project user on project database
 GRANT ALL PRIVILEGES ON ${project}.* TO '${project}'@localhost;
 -- make changes immediately
@@ -430,17 +430,17 @@ EOF
     sed -i 's/DB_PORT=.*/#DB_PORT=/g' /opt/"${project}"/"${project}"/.env
     echo 'DB_SOCKET=/var/lib/mysql/mysql.sock' >> /opt/"${project}"/"${project}"/.env
     sed -i "s/DB_USERNAME=.*/DB_USERNAME=${project}/g" /opt/"${project}"/"${project}"/.env
-    sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PROJECT_PASSWORD}/g" /opt/"${project}"/"${project}"/.env
-    sed -i "s/APP_URL=.*/APP_URL=${FQDN}/g" /opt/"${project}"/"${project}"/.env
+    sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${db_project_password}/g" /opt/"${project}"/"${project}"/.env
+    sed -i "s/APP_URL=.*/APP_URL=${fqdn}/g" /opt/"${project}"/"${project}"/.env
     sed -i 's/CACHE_DRIVER=.*/CACHE_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/REDIS_HOST=.*/REDIS_HOST=\/run\/redis\/redis.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=${REDIS_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=${redis_password}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/REDIS_PORT=.*/REDIS_PORT=0/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
 cat<<EOF>>/opt/"${project}"/"${project}"/.env
 SESSION_SECURE_COOKIE=true
 SESSION_SAME_SITE_COOKIE=Strict
-SESSION_DOMAIN=${FQDN}
+SESSION_DOMAIN=${fqdn}
 EOF
     su - "${project}" -c "cd /opt/${project}/${project}/ && php artisan config:clear 1> /dev/null 2> /dev/null"
     su - "${project}" -c "cd /opt/${project}/${project}/ && php artisan cache:clear 1> /dev/null 2> /dev/null"
@@ -459,11 +459,11 @@ EOF
     # Add group dev if it does not exists
     getent group devs 1> /dev/null 2> /dev/null || groupadd devs
     setfacl -Rm d:g:devs:rwx /opt/"${project}"
-    setfacl -m u:"${webserver}":--x,u:"${BACKEND}":--x,d:g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"
-    setfacl -m u:"${webserver}":--x,u:"${BACKEND}":--x,d:g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"
-    setfacl -Rm u:"${BACKEND}":r-x,d:u:"${BACKEND}":--x,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"/app
-    setfacl -Rm d:u:"${webserver}":r-x,d:u:"${BACKEND}":r-x,d:g:devs:rwx,u:"${webserver}":r-x,u:"${BACKEND}":r-x,g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"/public /opt/"${project}"/"${project}"/resources /opt/"${project}"/"${project}"/vendor
-    setfacl -Rm d:u:"${webserver}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx,u:"${webserver}":r-x,u:"${BACKEND}":rwx,g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"/storage /opt/"${project}"/"${project}"/bootstrap/cache
+    setfacl -m u:"${webserver}":--x,u:"${backend}":--x,d:g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"
+    setfacl -m u:"${webserver}":--x,u:"${backend}":--x,d:g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"
+    setfacl -Rm u:"${backend}":r-x,d:u:"${backend}":--x,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"/app
+    setfacl -Rm d:u:"${webserver}":r-x,d:u:"${backend}":r-x,d:g:devs:rwx,u:"${webserver}":r-x,u:"${backend}":r-x,g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"/public /opt/"${project}"/"${project}"/resources /opt/"${project}"/"${project}"/vendor
+    setfacl -Rm d:u:"${webserver}":r-x,d:u:"${backend}":rwx,d:g:devs:rwx,u:"${webserver}":r-x,u:"${backend}":rwx,g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"/storage /opt/"${project}"/"${project}"/bootstrap/cache
     printf " \\033[0;32mOK\\033[0m\\n";
 
     # Permissions step 3
@@ -500,7 +500,7 @@ EOF
     printf " \\033[0;32mOK\\033[0m\\n";
 
     printf "%-50s" "restarting services"
-    if ! systemctl restart "${webserver}" "${BACKEND}" "${DATABASE}" 1> /dev/null 2> /dev/null
+    if ! systemctl restart "${webserver}" "${backend}" "${database}" 1> /dev/null 2> /dev/null
     then
         printf " \\033[0;31mFAIL\\033[0m\\n"
         printf 'E: Cannot restart services.\n' >&2
