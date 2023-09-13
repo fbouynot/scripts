@@ -118,7 +118,6 @@ check_root() {
 restore() {
     nft flush ruleset
     nft -f "${TMPFILE}"
-    rm -f "${TMPFILE}"
 
     # Start fail2ban
     if systemctl is-enabled fail2ban > /dev/null 2>&1
@@ -192,7 +191,6 @@ main() {
         restore
         exit 8
     fi
-    rm -f "${TMPFILE}"
 
     # Start fail2ban
     if systemctl is-enabled fail2ban > /dev/null 2>&1
