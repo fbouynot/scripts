@@ -79,11 +79,11 @@ do
 
     case "${key}" in
         -p|--project)
-            export PROJECT="${2}"
+            export project="${2}"
             shift # consume -p
             ;;
         -w|--webserver)
-            export WEBSERVER="${2}"
+            export webserver="${2}"
             shift # consume -w
             ;;
         -b|--backend)
@@ -115,8 +115,8 @@ do
 done
 
 # Set defaults if no options specified
-PROJECT="${PROJECT:-$DEFAULT_PROJECT}"
-WEBSERVER="${WEBSERVER:-$DEFAULT_WEBSERVER}"
+project="${project:-$DEFAULT_PROJECT}"
+webserver="${webserver:-$DEFAULT_WEBSERVER}"
 BACKEND="${BACKEND:-$DEFAULT_BACKEND}"
 DATABASE="${DATABASE:-$DEFAULT_DATABASE}"
 CACHE="${CACHE:-$DEFAULT_CACHE}"
@@ -170,7 +170,7 @@ enable_package() {
 
 # Install nginx
 install_nginx() {
-    local -r PROJECT="${1}"
+    local -r project="${1}"
     local -r FQDN="${2}"
     # Allow worker_processes mode auto
     setsebool -P httpd_setrlimit 1
@@ -178,12 +178,12 @@ install_nginx() {
     # Install
     install_package nginx nginx-core nginx-filesystem nginx-mimetypes
     # Configure
-    cat > /etc/nginx/conf.d/"${PROJECT}".conf <<EOF
+    cat > /etc/nginx/conf.d/"${project}".conf <<EOF
 # PHP-FPM FastCGI server
 # network or unix domain socket configuration
 
-upstream ${PROJECT} {
-        server unix:/run/php-fpm/${PROJECT}.sock;
+upstream ${project} {
+        server unix:/run/php-fpm/${project}.sock;
 }
 
 server {
@@ -216,7 +216,7 @@ server {
 #        listen       443 ssl http2;
 #        listen       [::]:443 ssl http2;
         server_name  ${FQDN};
-        root         /opt/${PROJECT}/${PROJECT}/public;
+        root         /opt/${project}/${project}/public;
 
 #        ssl_certificate "/etc/nginx/certificate.pem";
 #        ssl_certificate_key "/etc/nginx/priv-key.pem";
@@ -236,7 +236,7 @@ location ~ \.php$ {
     fastcgi_index  index.php;
     include        fastcgi_params;
     fastcgi_param  SCRIPT_FILENAME  \$document_root\$fastcgi_script_name;
-    fastcgi_pass   ${PROJECT};
+    fastcgi_pass   ${project};
 }
         index           index.php;
         charset utf-8;
@@ -276,18 +276,18 @@ install_php-fpm() {
     # Add backend user if it does not exists
     id -u "${BACKEND}" 1> /dev/null 2> /dev/null || useradd "${BACKEND}" --system --no-create-home --user-group --shell /sbin/nologin
     # Configure php-fpm default pool user and group
-    cp /etc/php-fpm.d/www.conf /etc/php-fpm.d/"${PROJECT}".conf
+    cp /etc/php-fpm.d/www.conf /etc/php-fpm.d/"${project}".conf
 #    echo ';nothing' > /etc/php-fpm.d/www.conf
-#    sed -i "s/user =.*/user = ${BACKEND}/g" /etc/php-fpm.d/"${PROJECT}".conf
-#    sed -i "s/group =.*/group = ${BACKEND}/g" /etc/php-fpm.d/"${PROJECT}".conf
-#    sed -i "s/listen =.*/listen = listen = \/run\/php-fpm\/${BACKEND}\.sock/g" /etc/php-fpm.d/"${PROJECT}".conf
-#    sed -i "s/^\[www\]$/\[${BACKEND}\]/g" /etc/php-fpm.d/"${PROJECT}".conf
-    cat > /etc/php-fpm.d/"${PROJECT}".conf <<EOF
-[${PROJECT}]
+#    sed -i "s/user =.*/user = ${BACKEND}/g" /etc/php-fpm.d/"${project}".conf
+#    sed -i "s/group =.*/group = ${BACKEND}/g" /etc/php-fpm.d/"${project}".conf
+#    sed -i "s/listen =.*/listen = listen = \/run\/php-fpm\/${BACKEND}\.sock/g" /etc/php-fpm.d/"${project}".conf
+#    sed -i "s/^\[www\]$/\[${BACKEND}\]/g" /etc/php-fpm.d/"${project}".conf
+    cat > /etc/php-fpm.d/"${project}".conf <<EOF
+[${project}]
 user = ${BACKEND}
 group = ${BACKEND}
-listen = /run/php-fpm/${PROJECT}.sock
-listen.acl_users = ${WEBSERVER}
+listen = /run/php-fpm/${project}.sock
+listen.acl_users = ${webserver}
 listen.allowed_clients = 127.0.0.1
 pm = dynamic
 pm.max_children = 50
@@ -368,15 +368,15 @@ main() {
     # Check root permissions
     check_root
     # Install and configure services
-    install_"${WEBSERVER}" "${PROJECT}" "${FQDN}"
+    install_"${webserver}" "${project}" "${FQDN}"
     install_"${BACKEND}"
     install_"${DATABASE}" "${DB_PASSWORD}"
     install_"${CACHE}"
 
     # Create project user
-    rm -rf /opt/"${PROJECT}"
-    mkdir -p /opt/"${PROJECT}"
-    id -u "${PROJECT}" 1> /dev/null 2> /dev/null || useradd "${PROJECT}" -d /opt/"${PROJECT}" -M -r -s "$(which bash)"
+    rm -rf /opt/"${project}"
+    mkdir -p /opt/"${project}"
+    id -u "${project}" 1> /dev/null 2> /dev/null || useradd "${project}" -d /opt/"${project}" -M -r -s "$(which bash)"
 
     cat >> /etc/redis/redis.conf <<EOF
 unixsocket /run/redis/redis.sock
@@ -384,15 +384,15 @@ unixsocketperm 770
 requirepass ${REDIS_PASSWORD}
 EOF
     usermod -a -G redis "${BACKEND}"
-    usermod -a -G redis "${PROJECT}"
+    usermod -a -G redis "${project}"
     systemctl restart "${CACHE}"
     mysql -sfu root -p"${DB_PASSWORD}" <<EOF
 -- create project database
-CREATE DATABASE ${PROJECT};
+CREATE DATABASE ${project};
 -- create project user
-CREATE USER '${PROJECT}'@localhost IDENTIFIED BY '${DB_PROJECT_PASSWORD}';
+CREATE USER '${project}'@localhost IDENTIFIED BY '${DB_PROJECT_PASSWORD}';
 -- grants permissions for project user on project database
-GRANT ALL PRIVILEGES ON ${PROJECT}.* TO '${PROJECT}'@localhost;
+GRANT ALL PRIVILEGES ON ${project}.* TO '${project}'@localhost;
 -- make changes immediately
 FLUSH PRIVILEGES;
 EOF
@@ -401,52 +401,52 @@ EOF
     # Grants the project user and group read and write rights on project folder
 
     printf "%-50s" "permissions step 1: DAC classic"
-    chown -R root:"${PROJECT}" /opt/"${PROJECT}"
-    chmod 2770 /opt/"${PROJECT}"
-    find /opt/"${PROJECT}" -type d -exec chmod 2770 {} \;
-    find /opt/"${PROJECT}" -type f -exec chmod 0660 {} \;
+    chown -R root:"${project}" /opt/"${project}"
+    chmod 2770 /opt/"${project}"
+    find /opt/"${project}" -type d -exec chmod 2770 {} \;
+    find /opt/"${project}" -type f -exec chmod 0660 {} \;
     printf " \\033[0;32mOK\\033[0m\\n";
     # Setup Framework
     # Need access to https://repo.packagist.org
     install_package "composer"
-    su - "${PROJECT}" -c "composer global require laravel/installer 1> /dev/null 2> /dev/null"
-    rm -rf /opt/"${PROJECT}"/"${PROJECT}"
-    su - "${PROJECT}" -c "composer create-project laravel/laravel ${PROJECT} 1> /dev/null 2> /dev/null"
-    su - "${PROJECT}" -c "cp /opt/${PROJECT}/${PROJECT}/.env.example /opt/${PROJECT}/${PROJECT}/.env 1> /dev/null 2> /dev/null"
-    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan key:generate 1> /dev/null 2> /dev/null"
-    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && composer require laravel/ui 1> /dev/null 2> /dev/null"
-    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan ui bootstrap --auth 1> /dev/null 2> /dev/null"
-    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && npm install 1> /dev/null 2> /dev/null"
-    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && npm install @fontsource/nunito 1> /dev/null 2> /dev/null"
-    sed -i '2s/.*/@import "@fontsource\/nunito";/g' /opt/"${PROJECT}"/"${PROJECT}"/resources/sass/app.scss
-    sed -i '3s/.*/@import "@fontsource\/nunito\/500.css";/g' /opt/"${PROJECT}"/"${PROJECT}"/resources/sass/app.scss
-    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && npm run build 1> /dev/null 2> /dev/null"
-    sed -i '12d' /opt/"${PROJECT}"/"${PROJECT}"/resources/views/layouts/app.blade.php
-    sed -i '12d' /opt/"${PROJECT}"/"${PROJECT}"/resources/views/layouts/app.blade.php
-    sed -i '12d' /opt/"${PROJECT}"/"${PROJECT}"/resources/views/layouts/app.blade.php
-    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:cache 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "composer global require laravel/installer 1> /dev/null 2> /dev/null"
+    rm -rf /opt/"${project}"/"${project}"
+    su - "${project}" -c "composer create-project laravel/laravel ${project} 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cp /opt/${project}/${project}/.env.example /opt/${project}/${project}/.env 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cd /opt/${project}/${project}/ && php artisan key:generate 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cd /opt/${project}/${project}/ && composer require laravel/ui 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cd /opt/${project}/${project}/ && php artisan ui bootstrap --auth 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cd /opt/${project}/${project}/ && npm install 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cd /opt/${project}/${project}/ && npm install @fontsource/nunito 1> /dev/null 2> /dev/null"
+    sed -i '2s/.*/@import "@fontsource\/nunito";/g' /opt/"${project}"/"${project}"/resources/sass/app.scss
+    sed -i '3s/.*/@import "@fontsource\/nunito\/500.css";/g' /opt/"${project}"/"${project}"/resources/sass/app.scss
+    su - "${project}" -c "cd /opt/${project}/${project}/ && npm run build 1> /dev/null 2> /dev/null"
+    sed -i '12d' /opt/"${project}"/"${project}"/resources/views/layouts/app.blade.php
+    sed -i '12d' /opt/"${project}"/"${project}"/resources/views/layouts/app.blade.php
+    sed -i '12d' /opt/"${project}"/"${project}"/resources/views/layouts/app.blade.php
+    su - "${project}" -c "cd /opt/${project}/${project}/ && php artisan config:cache 1> /dev/null 2> /dev/null"
 # add to env ? what does it do ?
-    sed -i 's/DB_HOST=.*/#DB_HOST=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i 's/DB_PORT=.*/#DB_PORT=/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-    echo 'DB_SOCKET=/var/lib/mysql/mysql.sock' >> /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i "s/DB_USERNAME=.*/DB_USERNAME=${PROJECT}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PROJECT_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
-    sed -i "s/APP_URL=.*/APP_URL=${FQDN}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
+    sed -i 's/DB_HOST=.*/#DB_HOST=/g' /opt/"${project}"/"${project}"/.env
+    sed -i 's/DB_PORT=.*/#DB_PORT=/g' /opt/"${project}"/"${project}"/.env
+    echo 'DB_SOCKET=/var/lib/mysql/mysql.sock' >> /opt/"${project}"/"${project}"/.env
+    sed -i "s/DB_USERNAME=.*/DB_USERNAME=${project}/g" /opt/"${project}"/"${project}"/.env
+    sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PROJECT_PASSWORD}/g" /opt/"${project}"/"${project}"/.env
+    sed -i "s/APP_URL=.*/APP_URL=${FQDN}/g" /opt/"${project}"/"${project}"/.env
     sed -i 's/CACHE_DRIVER=.*/CACHE_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/SESSION_DRIVER=.*/SESSION_DRIVER=redis/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/REDIS_HOST=.*/REDIS_HOST=\/run\/redis\/redis.sock/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=${REDIS_PASSWORD}/g" /opt/"${PROJECT}"/"${PROJECT}"/.env
     sed -i 's/REDIS_PORT=.*/REDIS_PORT=0/g' /opt/"${PROJECT}"/"${PROJECT}"/.env
-cat<<EOF>>/opt/"${PROJECT}"/"${PROJECT}"/.env
+cat<<EOF>>/opt/"${project}"/"${project}"/.env
 SESSION_SECURE_COOKIE=true
 SESSION_SAME_SITE_COOKIE=Strict
 SESSION_DOMAIN=${FQDN}
 EOF
-    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:clear 1> /dev/null 2> /dev/null"
-    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan cache:clear 1> /dev/null 2> /dev/null"
-    su - "${PROJECT}" -c "cd /opt/${PROJECT}/${PROJECT}/ && php artisan config:cache 1> /dev/null 2> /dev/null"
-    su - "${PROJECT}" -c "cd ${PROJECT} && php artisan storage:link 1> /dev/null 2> /dev/null"
-    su - "${PROJECT}" -c "cd ${PROJECT} && php artisan migrate 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cd /opt/${project}/${project}/ && php artisan config:clear 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cd /opt/${project}/${project}/ && php artisan cache:clear 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cd /opt/${project}/${project}/ && php artisan config:cache 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cd ${project} && php artisan storage:link 1> /dev/null 2> /dev/null"
+    su - "${project}" -c "cd ${project} && php artisan migrate 1> /dev/null 2> /dev/null"
 # what does it do ?
 # add bootstrap and auth ?
 
@@ -458,12 +458,12 @@ EOF
     printf "%-50s" "permissions step 2: DAC ACL"
     # Add group dev if it does not exists
     getent group devs 1> /dev/null 2> /dev/null || groupadd devs
-    setfacl -Rm d:g:devs:rwx /opt/"${PROJECT}"
-    setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx,g:"${PROJECT}":rwx,d:g:"${PROJECT}":rwx /opt/"${PROJECT}"
-    setfacl -m u:"${WEBSERVER}":--x,u:"${BACKEND}":--x,d:g:devs:rwx,g:"${PROJECT}":rwx,d:g:"${PROJECT}":rwx /opt/"${PROJECT}"/"${PROJECT}"
-    setfacl -Rm u:"${BACKEND}":r-x,d:u:"${BACKEND}":--x,g:"${PROJECT}":rwx,d:g:"${PROJECT}":rwx /opt/"${PROJECT}"/"${PROJECT}"/app
-    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":r-x,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":r-x,g:devs:rwx,g:"${PROJECT}":rwx,d:g:"${PROJECT}":rwx /opt/"${PROJECT}"/"${PROJECT}"/public /opt/"${PROJECT}"/"${PROJECT}"/resources /opt/"${PROJECT}"/"${PROJECT}"/vendor
-    setfacl -Rm d:u:"${WEBSERVER}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx,u:"${WEBSERVER}":r-x,u:"${BACKEND}":rwx,g:devs:rwx,g:"${PROJECT}":rwx,d:g:"${PROJECT}":rwx /opt/"${PROJECT}"/"${PROJECT}"/storage /opt/"${PROJECT}"/"${PROJECT}"/bootstrap/cache
+    setfacl -Rm d:g:devs:rwx /opt/"${project}"
+    setfacl -m u:"${webserver}":--x,u:"${BACKEND}":--x,d:g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"
+    setfacl -m u:"${webserver}":--x,u:"${BACKEND}":--x,d:g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"
+    setfacl -Rm u:"${BACKEND}":r-x,d:u:"${BACKEND}":--x,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"/app
+    setfacl -Rm d:u:"${webserver}":r-x,d:u:"${BACKEND}":r-x,d:g:devs:rwx,u:"${webserver}":r-x,u:"${BACKEND}":r-x,g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"/public /opt/"${project}"/"${project}"/resources /opt/"${project}"/"${project}"/vendor
+    setfacl -Rm d:u:"${webserver}":r-x,d:u:"${BACKEND}":rwx,d:g:devs:rwx,u:"${webserver}":r-x,u:"${BACKEND}":rwx,g:devs:rwx,g:"${project}":rwx,d:g:"${project}":rwx /opt/"${project}"/"${project}"/storage /opt/"${project}"/"${project}"/bootstrap/cache
     printf " \\033[0;32mOK\\033[0m\\n";
 
     # Permissions step 3
@@ -473,14 +473,14 @@ EOF
     install_package "policycoreutils-python-utils"
     printf "%-50s" "permissions step 3: MAC"
     set +e
-    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
-    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
-    semanage fcontext -d "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
+    semanage fcontext -d "/opt/${project}/${project}/(public|resources|vendor)(/.*)?"
+    semanage fcontext -d "/opt/${project}/${project}/storage(/.*)?"
+    semanage fcontext -d "/opt/${project}/${project}/storage/logs(/.*)?"
     set -e
-    semanage fcontext -a -t httpd_sys_content_t "/opt/${PROJECT}/${PROJECT}/(public|resources|vendor)(/.*)?"
-    semanage fcontext -a -t httpd_sys_rw_content_t "/opt/${PROJECT}/${PROJECT}/storage(/.*)?"
-    semanage fcontext -a -t httpd_log_t "/opt/${PROJECT}/${PROJECT}/storage/logs(/.*)?"
-    restorecon -RF /opt/"${PROJECT}"
+    semanage fcontext -a -t httpd_sys_content_t "/opt/${project}/${project}/(public|resources|vendor)(/.*)?"
+    semanage fcontext -a -t httpd_sys_rw_content_t "/opt/${project}/${project}/storage(/.*)?"
+    semanage fcontext -a -t httpd_log_t "/opt/${project}/${project}/storage/logs(/.*)?"
+    restorecon -RF /opt/"${project}"
     printf " \\033[0;32mOK\\033[0m\\n";
 
     # Open ports
@@ -500,7 +500,7 @@ EOF
     printf " \\033[0;32mOK\\033[0m\\n";
 
     printf "%-50s" "restarting services"
-    if ! systemctl restart "${WEBSERVER}" "${BACKEND}" "${DATABASE}" 1> /dev/null 2> /dev/null
+    if ! systemctl restart "${webserver}" "${BACKEND}" "${DATABASE}" 1> /dev/null 2> /dev/null
     then
         printf " \\033[0;31mFAIL\\033[0m\\n"
         printf 'E: Cannot restart services.\n' >&2
