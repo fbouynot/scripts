@@ -37,15 +37,17 @@ then
     set -o xtrace
 fi
 
-readonly PROGNAME="${0##*/}"
-readonly VERSION='1.0.0'
+PROGNAME="${0##*/}"
+VERSION='1.0.0'
 
-readonly DEFAULT_PROJECT=laravel
-readonly DEFAULT_WEBSERVER=nginx
-readonly DEFAULT_BACKEND=php-fpm
-readonly DEFAULT_DATABASE=mariadb
-readonly DEFAULT_CACHE=redis
-readonly DEFAULT_FQDN=localhost
+DEFAULT_PROJECT=laravel
+DEFAULT_WEBSERVER=nginx
+DEFAULT_BACKEND=php-fpm
+DEFAULT_DATABASE=mariadb
+DEFAULT_CACHE=redis
+DEFAULT_FQDN=localhost
+
+readonly PROGNAME VERSION DEFAULT_PROJECT DEFAULT_WEBSERVER DEFAULT_BACKEND DEFAULT_DATABASE DEFAULT_CACHE DEFAULT_FQDN
 
 
 help() {
