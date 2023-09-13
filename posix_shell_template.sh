@@ -89,7 +89,7 @@ do
             version
             ;;
         *)
-        ;;
+            ;;
     esac
     shift # consume $1
 done
