@@ -29,7 +29,7 @@ fi
 
 # Define constants
 PROGNAME="${0##*/}"
-VERSION='1.1.7'
+VERSION='1.1.8'
 RED="$(tput setaf 1)"
 NC="$(tput sgr0)" # No Color
 
@@ -89,6 +89,7 @@ do
             version
             ;;
         *)
+            shift
             ;;
     esac
     shift # consume $1
