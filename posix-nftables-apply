@@ -29,7 +29,7 @@ fi
 
 # Define constants
 PROGNAME="${0##*/}"
-VERSION='1.2.6'
+VERSION='1.2.7'
 RED="$(tput setaf 1)"
 NC="$(tput sgr0)" # No Color
 
