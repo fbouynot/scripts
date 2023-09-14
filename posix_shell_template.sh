@@ -111,7 +111,7 @@ check_root() {
     # Check the command is run as root
     if [ "$(id -u)" -ne 0 ]
     then
-        printf "%sE:%s please run as root" "${RED}" "${NC}" >&2
+        printf "%sE:%s please run as root\n" "${RED}" "${NC}" >&2
         exit 3
     fi
 
