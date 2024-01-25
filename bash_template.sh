@@ -32,12 +32,17 @@ fi
 PROGNAME="${0##*/}"
 VERSION='1.1.6'
 RED="$(tput setaf 1)"
+GREEN="$(tput setaf 2)"
 NC="$(tput sgr0)" # No Color
 
 DEFAULT_VERBOSITY=0
 DEFAULT_MESSAGE="Hello, World!"
+TMP_DIR="$(mktemp -d)" # Create temp folder
 
-readonly PROGNAME VERSION RED NC DEFAULT_VERBOSITY DEFAULT_MESSAGE
+readonly PROGNAME VERSION RED GREEN NC DEFAULT_VERBOSITY DEFAULT_MESSAGE TMP_DIR
+
+# Trap to delete temp folder file at script exit
+trap 'rm -rf -- "$TMP_DIR"; printf "\n" >&4' EXIT
 
 # Help function: print the help message
 help() {
@@ -84,7 +89,10 @@ do
             shift # consume -m
             ;;
         -v|--verbose)
-            export verbosity=1
+            verbosity=1
+            ;;
+        -vv)
+            verbosity=2
             ;;
         -V|--version)
             version
@@ -103,34 +111,64 @@ message="${message:-$DEFAULT_MESSAGE}"
 cd "$(dirname "${0}")"
 
 # Check root permissions
+# shellcheck disable=SC2317
 check_root() {
     # Check the command is run as root
     if [ "${EUID}" -ne 0 ]
     then
         echo -e "${RED}E:${NC} please run as root" >&2
-        exit 3
+        return 1
     fi
+
+    return 0
+}
+
+# Print message
+# shellcheck disable=SC2317
+print_message() {
+    echo "${message}" > "${TMP_DIR}/output" || return 1
+    cat "${TMP_DIR}/output" || return 1
+
+    return 0
+}
+
+# Call the functions and print pretty output
+# arg1: message
+# arg2: command
+step() {
+    printf "%-50s" "${1}" 1>&4 2>&5
+    "${2}" || (printf "%s\n" "${RED}FAIL${NC}" >&5 && exit 4)
+    printf "%s\n" "${GREEN}OK${NC}" 1>&4 2>&5
 
     return 0
 }
 
 # Main function
 main() {
-    # Check for root permissions
-    check_root
-
-    # Print Hello World! on stdout
-    echo "${message}"
-
-    # Compress program with xz
-    case "${verbosity}" in
-        1)
-            tar cvvJf archive.xz "${PROGNAME}"
+    # Set verbosity
+    # Save address of stdout to 4
+    exec 4>&1
+    # Save address of stderr to 5
+    exec 5>&2
+    case "${verbose}" in
+        1|--destination)
+            # Remove messages that would be sent to stdout, keep stderr one
+            exec 1>/dev/null
+            ;;
+        2|--folder)
+            # Print both stdout and stderr messages
             ;;
         *)
-            tar cJf archive.xz "${PROGNAME}" > /dev/null 2>&1
+            # Remove both stdout and stderr messages
+            exec 1> /dev/null 2>/dev/null
             ;;
     esac
+    
+    # Check for root permissions
+    step "Check permissions" "check_root"
+
+    # Print Hello World! on stdout
+    step "Print message" "print_message"
 
     exit 0
 }
