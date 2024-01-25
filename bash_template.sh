@@ -150,7 +150,7 @@ main() {
     exec 4>&1
     # Save address of stderr to 5
     exec 5>&2
-    case "${verbose}" in
+    case "${verbosity}" in
         1|--destination)
             # Remove messages that would be sent to stdout, keep stderr one
             exec 1>/dev/null
