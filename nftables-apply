@@ -35,8 +35,8 @@ RED="$(tput setaf 1)"
 NC="$(tput sgr0)" # No Color
 
 DEFAULT_TIMEOUT=15
-DEFAULT_DESTINATION_FILE='/etc/nftables.conf'
-DEFAULT_SOURCE_FILE='/etc/nftables-candidate.conf'
+DEFAULT_DESTINATION_FILE='/etc/nftables/main.nft'
+DEFAULT_SOURCE_FILE='/etc/nftables/candidate.nft'
 
 readonly PROGNAME VERSION RED NC DEFAULT_TIMEOUT DEFAULT_DESTINATION_FILE DEFAULT_SOURCE_FILE
 
@@ -156,10 +156,10 @@ main() {
     fi
 
     # Dry run new ruleset, exit if failures
-    nft -f "${source_file}" || (echo -e "${RED}E:${NC} Invalid rules, exiting" >&2 && exit 6)
+    nft --check -f "${source_file}" || (echo -e "${RED}E:${NC} Invalid rules, exiting" >&2 && exit 6)
 
     # Check the candidate configuration starts by flushing ruleset
-    if [[ $(head -n 1 /etc/nftables-candidate.conf) != "flush ruleset" ]]
+    if [[ $(head -n 1 "${source_file}") != "flush ruleset" ]]
     then
         sed -i '1s/^/flush ruleset\n/' "${source_file}"
     fi
