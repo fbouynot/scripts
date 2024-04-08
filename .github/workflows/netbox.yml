@@ -1,7 +1,7 @@
 name: Open Issue when Netbox releases a new version
 on:
   schedule:
-    - cron: 51 * * * *
+    - cron: 06 * * * *
 
 jobs:
   create_issue:
@@ -18,7 +18,6 @@ jobs:
             -S '[Chore]: Upgrade Netbox to' \
             -L 1 \
             --jq '.[0].createdAt')
-          previous_issue_time=$(date -d $previous_issue_date +%s)
           new_release=$(gh release list -R netbox-community/netbox \
             --exclude-drafts \
             --exclude-pre-releases \
@@ -26,8 +25,7 @@ jobs:
             --jq '.[0]')
           new_release_tag=$(echo $new_release | jq '.tagName')
           new_release_date=$(echo $new_release | jq '.publishedAt')
-          new_release_time=$(date -d $new_release_date +%s)
-          if [ $issue -ge $release ]; then
+          if [[ "$previous_issue_date" > "$new_release_date" ]]; then
             gh issue create \
               --title "[Chore]: Upgrade netbox to $new_release_tag" \
               --body "$(gh release view $new_release_tag --repo netbox-community/netbox)"
