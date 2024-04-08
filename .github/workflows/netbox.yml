@@ -1,7 +1,7 @@
 name: Open Issue when Netbox releases a new version
 on:
   schedule:
-    - cron: 30 * * * *
+    - cron: 32 * * * *
 
 jobs:
   create_issue:
@@ -26,10 +26,9 @@ jobs:
           new_release_tag=$(echo $new_release | jq '.tagName')
           new_release_date=$(echo $new_release | jq '.publishedAt')
           if [[ "$previous_issue_date" > "$new_release_date" ]]; then
-            body=$(gh release view $new_release_tag --repo netbox-community/netbox)
             gh issue create \
               --title "[Chore]: Upgrade netbox to $new_release_tag" \
-              --body "$body"
+              --body "$(gh release view $new_release_tag --repo netbox-community/netbox --json body --jq '.body')"
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
