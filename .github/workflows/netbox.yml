@@ -1,7 +1,7 @@
 name: Open Issue when Netbox releases a new version
 on:
   schedule:
-    - cron: 35 * * * *
+    - cron: 45 * * * *
 
 jobs:
   create_issue:
@@ -12,12 +12,6 @@ jobs:
     steps:
       - name: Create team sync issue
         run: |
-          if [[ $CLOSE_PREVIOUS == true ]]; then
-            previous_issue_number=$(gh issue list \
-              --label "$LABELS" \
-              --json number \
-              --jq '.[0].number')
-          fi
           previous_issue_date=$(gh issue list \
             --json createdAt \
             -s all \
