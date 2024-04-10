@@ -13,6 +13,7 @@ jobs:
       issues: write
     steps:
       - name: Open Issue when monitored repos release a new version
+        shell: bash
         run: |
           apt update -y
           apt install -y curl jq wget
