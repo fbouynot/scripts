@@ -1,7 +1,7 @@
 name: Open Issue when monitored repos release a new version
 on:
   schedule:
-    - cron: 0,15,30,45 * * * *
+    - cron: 45 12 1 * *
 
 jobs:
   create_issue:
